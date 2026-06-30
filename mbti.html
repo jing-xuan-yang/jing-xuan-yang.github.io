@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MBTI 专业性格测试系统</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header & Version Select */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-top: 20px;
+        }
+
+        h1 { font-size: 2rem; margin-bottom: 10px; color: var(--primary); }
+        p.subtitle { color: var(--text-secondary); margin-bottom: 30px; }
+
+        .version-selector {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .version-btn {
+            padding: 12px 24px;
+            border: 2px solid var(--border);
+            background: var(--card-bg);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .version-btn.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            background: var(--border);
+            border-radius: 20px;
+            height: 8px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--primary-light));
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .progress-text {
+            text-align: right;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        /* Question Card */
+        .question-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .q-number {
+            font-size: 0.9rem;
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .q-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 25px;
+        }
+
+        .options { display: flex; flex-direction: column; gap: 12px; }
+
+        .option-label {
+            display: flex;
+            align-items: center;
+            padding: 16px 20px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+
+        .option-label:hover { border-color: var(--primary-light); background: #f1f5f9; }
+        
+        input[type="radio"] { display: none; }
+        
+        input[type="radio"]:checked + .option-label {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.08);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Navigation */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border-radius: 10px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-prev { background: var(--border); color: var(--text-secondary); }
+        .btn-prev:hover { background: #cbd5e1; }
+        .btn-next { background: var(--primary); color: white; }
+        .btn-next:hover { background: #4f46e5; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Result Section */
+        #resultSection { display: none; animation: fadeIn 0.6s ease; }
+        
+        .result-header {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            border-radius: 20px;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .type-code { font-size: 4rem; font-weight: 800; letter-spacing: 5px; margin-bottom: 10px; }
+        .type-name { font-size: 1.5rem; opacity: 0.9; }
+
+        .dimension-chart {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .dim-row { display: flex; align-items: center; gap: 15px; }
+        .dim-label { width: 30px; font-weight: 700; color: var(--primary); text-align: center;}
+        .dim-bar-bg { flex: 1; height: 12px; background: var(--border); border-radius: 10px; overflow: hidden; position: relative;}
+        .dim-bar-fill { height: 100%; border-radius: 10px; transition: width 1s ease; }
+        .dim-percent { width: 45px; font-size: 0.9rem; color: var(--text-secondary); text-align: right;}
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .detail-card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        }
+
+        .detail-card h3 { margin-bottom: 15px; color: var(--primary); display: flex; align-items: center; gap: 8px;}
+        .detail-card ul { padding-left: 20px; color: var(--text-secondary); }
+        .detail-card li { margin-bottom: 8px; }
+
+        .restart-btn {
+            display: block;
+            width: 100%;
+            margin-top: 30px;
+            padding: 15px;
+            background: var(--text);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        @media (max-width: 600px) {
+            .type-code { font-size: 3rem; }
+            .version-selector { flex-direction: column; }
+            .q-text { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>MBTI 性格测试</h1>
+        <p class="subtitle">探索你的内在人格类型与潜在优势</p>
+        
+        <div class="version-selector">
+            <button class="version-btn active" onclick="setVersion('quick')">⚡ 48题快速筛查版</button>
+            <button class="version-btn" onclick="setVersion('standard')">📋 93题经典标准版</button>
+        </div>
+    </header>
+
+    <!-- Quiz Area -->
+    <div id="quizArea">
+        <div class="progress-text" id="progressText">0 / 48</div>
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div class="question-card" id="questionCard">
+            <div class="q-number" id="qNumber">QUESTION 1</div>
+            <div class="q-text" id="qText">题目加载中...</div>
+            <div class="options" id="optionsContainer"></div>
+        </div>
+
+        <div class="nav-buttons">
+            <button class="btn btn-prev" id="prevBtn" onclick="navigate(-1)" disabled>上一题</button>
+            <button class="btn btn-next" id="nextBtn" onclick="navigate(1)">下一题</button>
+        </div>
+    </div>
+
+    <!-- Result Area -->
+    <div id="resultSection">
+        <div class="result-header">
+            <div class="type-code" id="resType">----</div>
+            <div class="type-name" id="resName">--</div>
+        </div>
+
+        <div class="dimension-chart" id="dimChart"></div>
+
+        <div class="detail-grid">
+            <div class="detail-card">
+                <h3>✨ 核心性格特点</h3>
+                <p id="resTraits" style="color:var(--text-secondary)"></p>
+            </div>
+            <div class="detail-card">
+                <h3>💪 主要优势</h3>
+                <ul id="resStrengths"></ul>
+            </div>
+            <div class="detail-card">
+                <h3>⚠️ 潜在劣势</h3>
+                <ul id="resWeaknesses"></ul>
+            </div>
+            <div class="detail-card">
+                <h3>💼 适合职业方向</h3>
+                <p id="resCareer" style="color:var(--text-secondary)"></p>
+            </div>
+        </div>
+
+        <button class="restart-btn" onclick="location.reload()">重新测试</button>
+    </div>
+</div>
+
+<script>
+// ==================== DATA ====================
+const QUESTIONS = {
+    quick: [
+        {t:"当你遇到新朋友时，你：", a:"说话的时间与聆听的时间相当", b:"聆听的时间会比说话的时间多", d:"EI"},
+        {t:"下列哪一种是你的一般生活取向？", a:"只管做吧", b:"找出多种不同选择", d:"SN"},
+        {t:"你喜欢自己的哪种性格？", a:"冷静而理性", b:"热情而体谅", d:"TF"},
+        {t:"你擅长：", a:"在有需要时同时协调多项工作", b:"专注在某一项工作上直至完成", d:"JP"},
+        {t:"你参与社交聚会时：", a:"总是能认识新朋友", b:"只跟几个亲密挚友呆在一起", d:"EI"},
+        {t:"当你尝试了解某些事情时，一般你会：", a:"先要了解细节", b:"先了解整体情况，细节容后再谈", d:"SN"},
+        {t:"你对下列哪方面较感兴趣？", a:"知道别人的想法", b:"知道别人的感受", d:"TF"},
+        {t:"你较喜欢下列哪个工作？", a:"能让你迅速和即时做出反应", b:"能让你定出目标然后逐步达成", d:"JP"},
+        {t:"下列哪一种说法较适合你？", a:"与友人尽兴后感到精力充沛并继续追求欢娱", b:"与友人尽兴后感到疲累需要一些空间", d:"EI"},
+        {t:"我较有兴趣知道别人的：", a:"经历（做过什么、认识什么人）", b:"计划和梦想（往哪里去、憧憬什么）", d:"SN"},
+        {t:"做决定时你更倾向于：", a:"依据逻辑分析", b:"依据个人价值观", d:"TF"},
+        {t:"你更喜欢的工作方式是：", a:"灵活应对突发状况", b:"按既定计划稳步推进", d:"JP"},
+        {t:"在团队讨论中你通常：", a:"主动表达观点", b:"先倾听他人再发言", d:"EI"},
+        {t:"学习新知识时你更关注：", a:"具体案例与实操步骤", b:"理论框架与底层逻辑", d:"SN"},
+        {t:"面对冲突时你优先：", a:"坚持原则与公平", b:"维护关系与和谐", d:"TF"},
+        {t:"安排周末行程时你倾向：", a:"提前规划好每个时段", b:"看当天心情随机决定", d:"JP"},
+        {t:"独处一段时间后你会：", a:"渴望与人交流获取能量", b:"觉得已充满电无需社交", d:"EI"},
+        {t:"阅读文章时你首先注意：", a:"数据、事实与细节", b:"隐喻、象征与潜在含义", d:"SN"},
+        {t:"评价他人工作时你更看重：", a:"任务完成的效率与质量", b:"过程中的努力与态度", d:"TF"},
+        {t:"面对截止日期你通常：", a:"提前完成避免拖延", b:"临近截止时效率更高", d:"JP"},
+        {t:"参加大型活动时你感觉：", a:"兴奋且愿意主动互动", b:"消耗精力想找安静角落", d:"EI"},
+        {t:"解决问题时你习惯：", a:"从过往经验中寻找方案", b:"构思创新的可能性", d:"SN"},
+        {t:"给他人提建议时你倾向：", a:"直接指出问题与改进点", b:"委婉表达并顾及对方情绪", d:"TF"},
+        {t:"整理房间或文件时你偏好：", a:"分类清晰、固定位置", b:"随手放置、方便取用即可", d:"JP"},
+        {t:"与他人合作时你更享受：", a:"频繁沟通、共同推进", b:"分工明确、独立完成", d:"EI"},
+        {t:"接收信息时你更需要：", a:"具体的时间、地点、人物", b:"背景、意义与关联", d:"SN"},
+        {t:"做重要选择时你优先考虑：", a:"客观利弊分析", b:"内心感受与价值观", d:"TF"},
+        {t:"旅行时你更喜欢：", a:"详细的行程表与预订", b:"只定大方向、随遇而安", d:"JP"},
+        {t:"工作间隙你倾向：", a:"和同事聊天放松", b:"独自休息恢复精力", d:"EI"},
+        {t:"描述一件事时你习惯：", a:"按时间顺序讲清细节", b:"先讲结论再补充背景", d:"SN"},
+        {t:"面对批评时你更在意：", a:"批评是否客观合理", b:"对方的态度与语气", d:"TF"},
+        {t:"开始新项目时你优先：", a:"制定详细计划与里程碑", b:"先动手尝试再调整方向", d:"JP"},
+        {t:"在陌生环境中你通常：", a:"主动探索、结识新人", b:"观察适应、等待他人接近", d:"EI"},
+        {t:"学习技能时你偏好：", a:"手把手教学、反复练习", b:"理解原理后自主摸索", d:"SN"},
+        {t:"处理人际矛盾时你倾向：", a:"就事论事、分清对错", b:"换位思考、寻求和解", d:"TF"},
+        {t:"日常作息你更习惯：", a:"固定时间起床或睡觉", b:"根据状态灵活调整", d:"JP"},
+        {t:"获得成就感主要来自：", a:"外部认可与社交反馈", b:"内部满足与自我突破", d:"EI"},
+        {t:"看待未来时你更关注：", a:"现实条件与可行性", b:"理想愿景与可能性", d:"SN"},
+        {t:"分配资源时你优先考虑：", a:"效率最大化", b:"公平与需求平衡", d:"TF"},
+        {t:"面对变化时你通常：", a:"希望尽快稳定下来", b:"享受变化带来的新鲜感", d:"JP"},
+        {t:"表达观点时你习惯：", a:"边说边想、通过交谈整理思路", b:"想清楚再说、避免语无伦次", d:"EI"},
+        {t:"记忆信息时你更容易记住：", a:"具体的数字、名称、场景", b:"抽象的概念、模式、联系", d:"SN"},
+        {t:"做决策时你更信任：", a:"数据分析与客观证据", b:"直觉与内心感受", d:"TF"},
+        {t:"完成任务后你倾向：", a:"立即开始下一项工作", b:"先休息、享受完成的松弛感", d:"JP"},
+        {t:"社交后你需要：", a:"更多互动来延续能量", b:"独处时间来恢复精力", d:"EI"},
+        {t:"理解复杂问题时你偏好：", a:"拆解为具体步骤逐一分析", b:"把握整体框架与核心逻辑", d:"SN"},
+        {t:"对待规则时你倾向：", a:"严格遵守、视为底线", b:"视情况灵活变通", d:"TF"},
+        {t:"长期目标你更愿意：", a:"设定明确节点并定期检查", b:"保持方向感但允许路径调整", d:"JP"},
+    ],
+    standard: [
+        // Part 1: Behavior (26)
+        {t:"当你要外出一整天，你会：", a:"计划你要做什么和在什么时候做", b:"说去就去", d:"JP"},
+        {t:"你认为自己是一个：", a:"较为随兴所至的人", b:"较为有条理的人", d:"JP"},
+        {t:"假如你是一位老师，你会选教：", a:"以事实为主的课程", b:"涉及理论的课程", d:"SN"},
+        {t:"你通常：", a:"与人容易混熟", b:"比较沉静或矜持", d:"EI"},
+        {t:"一般来说，你和哪些人比较合得来？", a:"富于想象力的人", b:"现实的人", d:"SN"},
+        {t:"你是否经常让：", a:"你的情感支配你的理智", b:"你的理智主宰你的情感", d:"TF"},
+        {t:"处理许多事情上，你会喜欢：", a:"凭兴所至行事", b:"按照计划行事", d:"JP"},
+        {t:"你是否：", a:"容易让人了解", b:"难于让人了解", d:"EI"},
+        {t:"按照程序表做事：", a:"合你心意", b:"令你感到束缚", d:"JP"},
+        {t:"当你有一份特别的任务，你会喜欢：", a:"开始前小心组织计划", b:"边做边找须做什么", d:"JP"},
+        {t:"在大多数情况下，你会选择：", a:"顺其自然", b:"按程序表做事", d:"JP"},
+        {t:"大多数人会说你是一个：", a:"重视自我隐私的人", b:"非常坦率开放的人", d:"EI"},
+        {t:"你宁愿被人认为是一个：", a:"实事求是的人", b:"机灵的人", d:"SN"},
+        {t:"在一大群人当中，通常是：", a:"你介绍大家认识", b:"别人介绍你", d:"EI"},
+        {t:"你会跟哪些人做朋友？", a:"常提出新主意的", b:"脚踏实地的", d:"SN"},
+        {t:"你倾向：", a:"重视感情多于逻辑", b:"重视逻辑多于感情", d:"TF"},
+        {t:"你比较喜欢：", a:"坐观事情发展才作计划", b:"很早就作计划", d:"JP"},
+        {t:"你喜欢花很多的时间：", a:"一个人独处", b:"和别人在一起", d:"EI"},
+        {t:"与很多人一起会：", a:"令你活力倍增", b:"常常令你心力憔悴", d:"EI"},
+        {t:"你比较喜欢：", a:"很早便把约会等事情安排妥当", b:"无拘无束看当时有什么好玩就做什么", d:"JP"},
+        {t:"计划一个旅程时，你较喜欢：", a:"大部分时间跟当天感觉行事", b:"事先知道大部分日子会做什么", d:"JP"},
+        {t:"在社交聚会中，你：", a:"有时感到郁闷", b:"常常乐在其中", d:"EI"},
+        {t:"你通常：", a:"和别人容易混熟", b:"趋向自处一隅", d:"EI"},
+        {t:"哪些人会更吸引你？", a:"思想敏捷及非常聪颖的人", b:"实事求是具丰富常识的人", d:"SN"},
+        {t:"在日常工作中，你会：", a:"颇为喜欢处理迫使你分秒必争的突发", b:"通常预先计划以免在压力下工作", d:"JP"},
+        {t:"你认为别人一般：", a:"要花很长时间才认识你", b:"用很短时间便认识你", d:"EI"},
+        // Part 2: Word Preference (32)
+        {t:"哪一个词语更合你心意？", a:"注重隐私", b:"坦率开放", d:"EI"},
+        {t:"哪一个词语更合你心意？", a:"预先安排的", b:"无计划的", d:"JP"},
+        {t:"哪一个词语更合你心意？", a:"抽象", b:"具体", d:"SN"},
+        {t:"哪一个词语更合你心意？", a:"温柔", b:"坚定", d:"TF"},
+        {t:"哪一个词语更合你心意？", a:"思考", b:"感受", d:"TF"},
+        {t:"哪一个词语更合你心意？", a:"事实", b:"意念", d:"SN"},
+        {t:"哪一个词语更合你心意？", a:"冲动", b:"决定", d:"JP"},
+        {t:"哪一个词语更合你心意？", a:"热衷", b:"文静", d:"EI"},
+        {t:"哪一个词语更合你心意？", a:"文静", b:"外向", d:"EI"},
+        {t:"哪一个词语更合你心意？", a:"有系统", b:"随意", d:"JP"},
+        {t:"哪一个词语更合你心意？", a:"理论", b:"肯定", d:"SN"},
+        {t:"哪一个词语更合你心意？", a:"敏感", b:"公正", d:"TF"},
+        {t:"哪一个词语更合你心意？", a:"令人信服", b:"感人的", d:"TF"},
+        {t:"哪一个词语更合你心意？", a:"声明", b:"概念", d:"SN"},
+        {t:"哪一个词语更合你心意？", a:"不受约束", b:"预先安排", d:"JP"},
+        {t:"哪一个词语更合你心意？", a:"矜持", b:"健谈", d:"EI"},
+        {t:"哪一个词语更合你心意？", a:"有条不紊", b:"不拘小节", d:"JP"},
+        {t:"哪一个词语更合你心意？", a:"意念", b:"实况", d:"SN"},
+        {t:"哪一个词语更合你心意？", a:"同情怜悯", b:"远见", d:"TF"},
+        {t:"哪一个词语更合你心意？", a:"利益", b:"祝福", d:"TF"},
+        {t:"哪一个词语更合你心意？", a:"务实的", b:"理论的", d:"SN"},
+        {t:"哪一个词语更合你心意？", a:"朋友不多", b:"朋友众多", d:"EI"},
+        {t:"哪一个词语更合你心意？", a:"有系统", b:"即兴", d:"JP"},
+        {t:"哪一个词语更合你心意？", a:"富想象的", b:"以事论事", d:"SN"},
+        {t:"哪一个词语更合你心意？", a:"亲切的", b:"客观的", d:"TF"},
+        {t:"哪一个词语更合你心意？", a:"客观的", b:"热情的", d:"TF"},
+        {t:"哪一个词语更合你心意？", a:"建造", b:"发明", d:"SN"},
+        {t:"哪一个词语更合你心意？", a:"文静", b:"爱合群", d:"EI"},
+        {t:"哪一个词语更合你心意？", a:"理论", b:"事实", d:"SN"},
+        {t:"哪一个词语更合你心意？", a:"富同情", b:"合逻辑", d:"TF"},
+        {t:"哪一个词语更合你心意？", a:"具分析力", b:"多愁善感", d:"TF"},
+        {t:"哪一个词语更合你心意？", a:"合情合理", b:"令人着迷", d:"TF"},
+        // Part 3: Situational (35)
+        {t:"当你要在一个星期内完成一个大项目，你在开始的时候会：", a:"把要做的不同工作依次列出", b:"马上动工", d:"JP"},
+        {t:"在社交场合中，你经常会感到：", a:"与某些人很难打开话匣儿和保持对话", b:"与多数人都能从容地长谈", d:"EI"},
+        {t:"要做许多人也做的事，你比较喜欢：", a:"按照一般认可的方法去做", b:"构想一个自己的想法", d:"SN"},
+        {t:"你刚认识的朋友能否说出你的兴趣：", a:"马上可以", b:"要待他们真正了解你之后才可以", d:"EI"},
+        {t:"你通常较喜欢的科目是：", a:"讲授概念和原则的", b:"讲授事实和数据的", d:"SN"},
+        {t:"哪个是较高的赞誉？", a:"一贯感性的人", b:"一贯理性的人", d:"TF"},
+        {t:"你认为按照程序表做事：", a:"有时需要但一般不大喜欢", b:"大多数情况下有帮助且喜欢做", d:"JP"},
+        {t:"和一群人在一起，你通常会选：", a:"跟你很熟的人谈话", b:"跟各种不同的人谈话", d:"EI"},
+        {t:"在阅读时，你较喜欢：", a:"实用性的书籍", b:"富有想象力的书籍", d:"SN"},
+        {t:"别人对你的评价通常是：", a:"很有条理", b:"很随和", d:"JP"},
+        {t:"你更喜欢的工作环境是：", a:"安静、少干扰", b:"热闹、多互动", d:"EI"},
+        {t:"面对新事物时，你首先关注：", a:"它是什么、怎么用", b:"它意味着什么、有何可能", d:"SN"},
+        {t:"做决定时，你更难舍弃的是：", a:"逻辑一致性", b:"人际和谐", d:"TF"},
+        {t:"你对待时间的态度是：", a:"时间是用来管理的", b:"时间是用来体验的", d:"JP"},
+        {t:"在群体中，你更倾向于：", a:"主导话题方向", b:"跟随话题节奏", d:"EI"},
+        {t:"你更相信：", a:"亲眼所见、亲身所历", b:"直觉预感、内在洞察", d:"SN"},
+        {t:"当他人犯错时，你更在意：", a:"错误本身及如何纠正", b:"犯错者的动机与处境", d:"TF"},
+        {t:"你更喜欢的项目类型是：", a:"有明确交付物与验收标准", b:"开放式探索、成果形式灵活", d:"JP"},
+        {t:"休息日你更愿意：", a:"参加聚会、外出活动", b:"在家看书、看电影或发呆", d:"EI"},
+        {t:"你描述事物时常用：", a:"精确的词汇与数据", b:"比喻、类比或模糊表达", d:"SN"},
+        {t:"你认为好的领导者应该：", a:"决策果断、标准清晰", b:"善于共情、凝聚人心", d:"TF"},
+        {t:"你对待计划的态度是：", a:"计划是用来执行的", b:"计划是用来参考和调整的", d:"JP"},
+        {t:"在会议中，你通常：", a:"积极发言、推动进程", b:"认真记录、会后反思", d:"EI"},
+        {t:"你学习新领域时偏好：", a:"从基础事实与案例入手", b:"从核心理论与范式入手", d:"SN"},
+        {t:"你评价一段关系时更看重：", a:"双方是否坦诚、有共同目标", b:"彼此是否理解、情感联结深", d:"TF"},
+        {t:"你面对不确定性时：", a:"感到焦虑、希望尽快明确", b:"感到兴奋、享受探索过程", d:"JP"},
+        {t:"你获取能量的主要方式是：", a:"与他人互动交流", b:"独处沉思或沉浸爱好", d:"EI"},
+        {t:"你关注信息的重点是：", a:"可验证的事实与细节", b:"隐藏的模式与深层含义", d:"SN"},
+        {t:"你处理分歧时优先：", a:"厘清事实、达成共识", b:"照顾情绪、维持关系", d:"TF"},
+        {t:"你对待任务收尾的态度是：", a:"必须彻底完成才能安心", b:"大致完成即可转向新兴趣", d:"JP"},
+        {t:"你在陌生社交场合中：", a:"主动寻找话题、打破沉默", b:"等待他人搭话、观察环境", d:"EI"},
+        {t:"你理解世界的方式更偏向：", a:"通过感官经验与实证", b:"通过抽象思维与想象", d:"SN"},
+        {t:"你做道德判断时依据：", a:"普遍原则与公正标准", b:"具体情境与个体关怀", d:"TF"},
+        {t:"你理想的生活节奏是：", a:"规律、可预测、有秩序", b:"自由、多变、充满意外", d:"JP"},
+        {t:"你最终认同的自我形象是：", a:"一个可靠、务实的行动者", b:"一个深刻、独特的思考者", d:"EI"}
+    ]
+};
+
+const TYPE_DATA = {
+    ISTJ:{name:"检查员",traits:"安静、严肃、有责任感、务实、可靠。注重实际，讲究逻辑，有很强的集中力和组织能力。",strengths:["高度的责任感和可靠性","注重细节和精确性","善于制定和执行计划","值得信赖，能完成承诺的任务"],weaknesses:["有时过于保守和顽固","难以应对突发变化","可能忽视情感因素","不太愿意表达自己的情感"],career:"会计、审计、项目管理、行政管理、军事、执法、工程技术"},
+    ISFJ:{name:"守卫者",traits:"温暖、关怀、负责、忠诚、细致。具有很强的服务精神和记忆力，重视传统和安全。",strengths:["强烈的同理心和服务精神","极强的记忆力和组织能力","忠诚可靠，关心他人福祉","擅长创造和谐的环境"],weaknesses:["容易过度付出忽视自身需求","抗拒改变和挑战","可能因过度敏感而感到压力","难以做出艰难的决定"],career:"护理、教育、社会工作、人力资源、图书馆管理、客户服务"},
+    INFJ:{name:"提倡者",traits:"富有想象力、理想主义、有洞察力、有原则。追求深层次的意义和人际和谐。",strengths:["深刻的洞察力和直觉","强烈的价值观和使命感","善于激励和启发他人","追求完美和有意义的目标"],weaknesses:["容易自我批评和过度理想化","需要大量的独处时间","可能对批评过于敏感","难以处理日常琐事"],career:"心理咨询、写作、艺术创作、宗教/哲学研究、非营利组织领导"},
+    INTJ:{name:"建筑师",traits:"独立、自信、有远见、逻辑性强。善于战略规划和系统性思考，追求卓越。",strengths:["强大的战略思维和分析能力","独立自主不依赖他人","追求知识和理解的深度","能够实现长期目标"],weaknesses:["可能显得冷漠或傲慢","对他人期望过高","不擅长处理情感问题","有时过于固执己见"],career:"科学研究、战略规划、软件开发、投资分析、建筑设计、企业顾问"},
+    ISTP:{name:"鉴赏家",traits:"灵活、理性、观察敏锐、实用主义。喜欢动手解决问题，冷静高效。",strengths:["出色的动手能力和实践技能","冷静分析问题的能力","适应性强善于解决问题","不喜欢浪费时间和精力"],weaknesses:["可能显得冷漠或疏远","难以坚持长期承诺","不擅长表达情感","可能过于冒险或冲动"],career:"机械工程、飞行员、运动员、技术维修、数据分析、手工艺"},
+    ISFP:{name:"探险家",traits:"温和、随和、艺术气质、重视自由。活在当下，对美有独特的感知力。",strengths:["强烈的审美意识和艺术天赋","尊重他人和不同观点","灵活适应变化的环境","关注当下享受生活"],weaknesses:["可能缺乏长远规划","不愿面对冲突","对自己的能力缺乏信心","难以应对压力和批评"],career:"艺术设计、音乐、摄影、时尚、兽医、园艺、烹饪"},
+    INFP:{name:"调停者",traits:"理想主义、有同情心、富有创意、忠诚。追求内心真实和个人价值的实现。",strengths:["强烈的个人价值观和道德感","丰富的想象力和创造力","善于理解和帮助他人","追求真实和有意义的关系"],weaknesses:["可能过于理想化现实","难以接受批评","拖延症难以做决定","容易受到他人情绪影响"],career:"作家、心理咨询师、艺术家、社会工作者、翻译、UX设计"},
+    INTP:{name:"逻辑学家",traits:"好奇、分析、创新、独立。热爱理论和抽象概念，追求知识的本质。",strengths:["卓越的逻辑推理和分析能力","对知识的强烈渴望","创新思维善于解决复杂问题","独立思考不受传统束缚"],weaknesses:["可能显得不切实际或脱离现实","难以处理日常事务","不擅长表达情感","容易陷入过度分析"],career:"软件开发、科学研究、数学、哲学、系统架构、学术研究"},
+    ESTP:{name:"企业家",traits:"外向、活泼、实用、灵活。行动派，善于抓住当下的机会，精力充沛。",strengths:["出色的行动力和执行力","善于处理紧急情况","乐观开朗感染他人","善于抓住机会"],weaknesses:["可能缺乏耐心和长远规划","难以专注于单一任务","可能忽视他人感受","容易寻求刺激和冒险"],career:"销售、创业、运动、急诊医疗、警察/消防、演艺"},
+    ESFP:{name:"表演者",traits:"热情、友好、爱玩、自发。天生的娱乐者，善于活跃气氛和建立人际关系。",strengths:["天生的表演者和娱乐者","善于建立人际关系","积极乐观充满活力","灵活适应各种情况"],weaknesses:["可能缺乏专注力和深度","难以处理抽象概念","可能过于关注当下的快乐","难以应对长期的压力"],career:"演艺、活动策划、旅游、公关、销售、幼儿教育"},
+    ENFP:{name:"竞选者",traits:"热情、有创意、社交能力强、富有洞察力。充满激情，善于发现可能性。",strengths:["强大的创造力和想象力","善于激励和鼓舞他人","灵活适应变化","富有同理心和魅力"],weaknesses:["可能过于理想化","难以坚持完成任务","容易分心","可能对批评过于敏感"],career:"广告创意、新闻传媒、创业、培训、艺术表演、市场营销"},
+    ENTP:{name:"辩论家",traits:"聪明、多才多艺、好奇、有创意。喜欢智力挑战，善于从多角度分析问题。",strengths:["敏捷的思维和创新能力","善于发现新机会和可能性","优秀的沟通和说服能力","适应性强乐于挑战"],weaknesses:["可能难以完成已经开始的项目","有时显得好辩或挑衅","可能忽视细节和实际操作","容易厌倦重复性工作"],career:"创业、法律、咨询、产品设计、风险投资、媒体"},
+    ESTJ:{name:"总经理",traits:"外向、严肃、注重效率、组织能力强。天生的管理者，重视规则和秩序。",strengths:["强大的领导和组织能力","注重效率和成果","可靠负责信守承诺","善于制定和执行标准"],weaknesses:["可能过于严格或控制欲强","难以接受不同的观点","可能忽视他人的情感需求","不擅长处理模糊不清的情况"],career:"企业管理、政府公务、金融、法律、供应链管理、教育行政"},
+    ESFJ:{name:"执政官",traits:"外向、友善、负责、合群。热心助人，善于维护社会和谐与传统。",strengths:["强烈的团队精神和社会责任感","善于协调和维持和谐","关心他人的需求和感受","优秀的组织和执行能力"],weaknesses:["可能过于依赖他人的认可","难以应对冲突和批评","可能忽视自己的需求","可能过于传统和保守"],career:"医疗护理、教育、人力资源、社区服务、酒店管理、公共关系"},
+    ENFJ:{name:"主人公",traits:"有魅力、有同理心、有组织、鼓舞人心。天生的领导者，致力于帮助他人成长。",strengths:["卓越的沟通和领导能力","强烈的同理心和洞察力","善于激励和培养他人","致力于实现共同目标"],weaknesses:["可能过于关注他人的看法","难以拒绝他人的请求","可能忽视实际操作细节","可能对批评过于敏感"],career:"教育培训、人力资源、非营利组织、心理咨询、企业管理、政治"},
+    ENTJ:{name:"指挥官",traits:"自信、果断、有远见、组织能力强。天生的战略领导者，追求效率和卓越。",strengths:["卓越的战略规划和执行能力","强烈的意志力和决心","善于激励团队实现目标","高效的决策和管理能力"],weaknesses:["可能显得专横或强势","可能忽视他人的感受","难以容忍低效率","可能过于追求控制权"],career:"CEO/高管、律师、管理咨询、企业家、投资银行、项目负责人"}
+};
+
+// ==================== STATE ====================
+let currentVersion = 'quick';
+let currentIndex = 0;
+let answers = {};
+
+// ==================== CORE LOGIC ====================
+function setVersion(ver) {
+    if (!confirm('切换版本将清空当前进度，确定吗？')) return;
+    currentVersion = ver;
+    currentIndex = 0;
+    answers = {};
+    document.querySelectorAll('.version-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    renderQuestion();
+}
+
+function getQuestions() { return QUESTIONS[currentVersion]; }
+
+function renderQuestion() {
+    const qs = getQuestions();
+    const q = qs[currentIndex];
+    
+    document.getElementById('qNumber').textContent = `QUESTION ${currentIndex + 1}`;
+    document.getElementById('qText').textContent = q.t;
+    document.getElementById('progressText').textContent = `${currentIndex + 1} / ${qs.length}`;
+    document.getElementById('progressBar').style.width = `${((currentIndex + 1) / qs.length) * 100}%`;
+    
+    const container = document.getElementById('optionsContainer');
+    container.innerHTML = '';
+    
+    ['a','b'].forEach(opt => {
+        const id = `opt_${opt}`;
+        const checked = answers[currentIndex] === opt ? 'checked' : '';
+        container.innerHTML += `
+            <label>
+                <input type="radio" name="answer" value="${opt}" ${checked} onchange="selectAnswer('${opt}')">
+                <div class="option-label">${opt.toUpperCase()}. ${q[opt]}</div>
+            </label>`;
+    });
+    
+    document.getElementById('prevBtn').disabled = currentIndex === 0;
+    const nextBtn = document.getElementById('nextBtn');
+    nextBtn.textContent = currentIndex === qs.length - 1 ? '查看结果' : '下一题';
+    nextBtn.disabled = !answers.hasOwnProperty(currentIndex);
+}
+
+function selectAnswer(val) {
+    answers[currentIndex] = val;
+    document.getElementById('nextBtn').disabled = false;
+}
+
+function navigate(dir) {
+    const qs = getQuestions();
+    if (dir === 1 && currentIndex === qs.length - 1) {
+        showResult();
+        return;
+    }
+    currentIndex += dir;
+    currentIndex = Math.max(0, Math.min(currentIndex, qs.length - 1));
+    renderQuestion();
+}
+
+function calculateType() {
+    const scores = {E:0,I:0,S:0,N:0,T:0,F:0,J:0,P:0};
+    const qs = getQuestions();
+    
+    Object.entries(answers).forEach(([idx, val]) => {
+        const dim = qs[parseInt(idx)].d;
+        const letter = val === 'a' ? dim[0] : dim[1];
+        scores[letter]++;
+    });
+    
+    const type = 
+        (scores.E >= scores.I ? 'E' : 'I') +
+        (scores.S >= scores.N ? 'S' : 'N') +
+        (scores.T >= scores.F ? 'T' : 'F') +
+        (scores.J >= scores.P ? 'J' : 'P');
+    
+    const pcts = {
+        EI: { left: 'E', right: 'I', lVal: scores.E, rVal: scores.I },
+        SN: { left: 'S', right: 'N', lVal: scores.S, rVal: scores.N },
+        TF: { left: 'T', right: 'F', lVal: scores.T, rVal: scores.F },
+        JP: { left: 'J', right: 'P', lVal: scores.J, rVal: scores.P }
+    };
+    
+    return { type, scores, pcts };
+}
+
+function showResult() {
+    const { type, pcts } = calculateType();
+    const data = TYPE_DATA[type];
+    
+    document.getElementById('quizArea').style.display = 'none';
+    document.getElementById('resultSection').style.display = 'block';
+    document.getElementById('resType').textContent = type;
+    document.getElementById('resName').textContent = data.name;
+    document.getElementById('resTraits').textContent = data.traits;
+    document.getElementById('resCareer').textContent = data.career;
+    
+    const sList = document.getElementById('resStrengths');
+    sList.innerHTML = data.strengths.map(s => `<li>${s}</li>`).join('');
+    const wList = document.getElementById('resWeaknesses');
+    wList.innerHTML = data.weaknesses.map(w => `<li>${w}</li>`).join('');
+    
+    // Dimension bars
+    const chart = document.getElementById('dimChart');
+    chart.innerHTML = '';
+    const colors = {E:'#6366f1',I:'#ec4899',S:'#10b981',N:'#f59e0b',T:'#3b82f6',F:'#ef4444',J:'#8b5cf6',P:'#14b8a6'};
+    
+    Object.values(pcts).forEach(d => {
+        const total = d.lVal + d.rVal || 1;
+        const lPct = Math.round((d.lVal / total) * 100);
+        const rPct = 100 - lPct;
+        const winner = lPct >= rPct ? d.left : d.right;
+        const winColor = colors[winner];
+        
+        chart.innerHTML += `
+            <div class="dim-row">
+                <div class="dim-label" style="color:${colors[d.left]}">${d.left}</div>
+                <div class="dim-bar-bg">
+                    <div class="dim-bar-fill" style="width:${lPct}%;background:${winColor}"></div>
+                </div>
+                <div class="dim-percent">${lPct >= rPct ? lPct : rPct}%</div>
+                <div class="dim-label" style="color:${colors[d.right]}">${d.right}</div>
+            </div>`;
+    });
+    
+    window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+// Init
+renderQuestion();
+</script>
+</body>
+</html>
