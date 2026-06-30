@@ -3,261 +3,422 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>导航站</title>
+<title>导航</title>
 <style>
+:root {
+  --bg: #0c0c18;
+  --surface: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
+  --text: #e8e8f0;
+  --text2: rgba(255,255,255,0.45);
+  --accent: #818cf8;
+  --accent2: #a78bfa;
+  --radius: 14px;
+}
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
   min-height: 100vh;
-  background: #0f0f1a;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-  position: relative;
 }
-
-/* animated background */
 body::before {
   content: '';
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.12) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 50%, rgba(139, 92, 246, 0.10) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 0%, rgba(14, 165, 233, 0.06) 0%, transparent 40%);
-  pointer-events: none;
+    radial-gradient(ellipse 600px 400px at 10% 20%, rgba(99,102,241,0.10), transparent),
+    radial-gradient(ellipse 500px 500px at 90% 80%, rgba(139,92,246,0.08), transparent);
+  pointer-events: none; z-index: 0;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 30px 20px 60px; position: relative; z-index: 1; }
+
+/* ─── Header ─── */
+.header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.header h1 {
+  font-size: 1.6rem; font-weight: 800;
+  background: linear-gradient(135deg, #818cf8, #a78bfa, #60a5fa);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; white-space: nowrap;
 }
 
-/* floating orbs */
-.orb {
-  position: fixed;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.3;
-  pointer-events: none;
-  animation: orbFloat 20s ease-in-out infinite;
+/* ─── Search ─── */
+.search-wrap {
+  flex: 1; min-width: 180px; position: relative;
 }
-.orb:nth-child(1) {
-  width: 400px; height: 400px;
-  background: #6366f1;
-  top: -100px; left: -100px;
-  animation-delay: 0s;
+.search-wrap input {
+  width: 100%; padding: 10px 16px 10px 38px;
+  border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font-size: 0.9rem;
+  outline: none; transition: 0.2s;
 }
-.orb:nth-child(2) {
-  width: 350px; height: 350px;
-  background: #8b5cf6;
-  bottom: -80px; right: -80px;
-  animation-delay: -7s;
+.search-wrap input:focus { border-color: var(--accent); background: rgba(255,255,255,0.06); }
+.search-wrap input::placeholder { color: var(--text2); }
+.search-wrap .icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  font-size: 0.9rem; opacity: 0.4; pointer-events: none;
 }
-.orb:nth-child(3) {
-  width: 250px; height: 250px;
-  background: #0ea5e9;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  animation-delay: -14s;
+.search-results {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  background: rgba(16,16,32,0.95); backdrop-filter: blur(20px);
+  border: 1px solid var(--border); border-radius: 12px;
+  max-height: 300px; overflow-y: auto; display: none; z-index: 100;
 }
+.search-results.show { display: block; }
+.search-results .item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; cursor: pointer; transition: 0.15s;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.search-results .item:last-child { border-bottom: none; }
+.search-results .item:hover { background: rgba(129,140,248,0.1); }
+.search-results .item .icon { font-size: 1.1rem; }
+.search-results .item .info { flex: 1; }
+.search-results .item .name { font-size: 0.9rem; }
+.search-results .item .name em { font-style: normal; color: var(--accent); font-weight: 600; }
+.search-results .item .path { font-size: 0.75rem; color: var(--text2); margin-top: 2px; }
 
-@keyframes orbFloat {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -30px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
+/* ─── Breadcrumb ─── */
+.breadcrumb {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+  padding: 12px 16px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 10px;
+  margin-bottom: 28px; font-size: 0.88rem;
 }
-
-.container {
-  position: relative;
-  z-index: 1;
-  text-align: center;
-  padding: 20px;
+.breadcrumb .sep { color: var(--text2); margin: 0 4px; font-size: 0.75rem; }
+.breadcrumb .item {
+  color: var(--text2); cursor: pointer; padding: 2px 6px;
+  border-radius: 6px; transition: 0.15s; text-decoration: none;
 }
-
-h1 {
-  font-size: 2.6rem;
-  font-weight: 800;
-  color: #fff;
-  margin-bottom: 10px;
-  letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #a78bfa, #60a5fa, #34d399);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.breadcrumb .item:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+.breadcrumb .item.active { color: var(--accent); cursor: default; }
+.breadcrumb .item.active:hover { background: transparent; }
+.breadcrumb .back-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 6px; cursor: pointer;
+  color: var(--text2); transition: 0.15s; font-size: 0.88rem;
+  border: 1px solid var(--border); background: var(--surface); margin-right: 4px;
 }
+.breadcrumb .back-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
 
-.subtitle {
-  color: rgba(255,255,255,0.45);
-  font-size: 1rem;
-  margin-bottom: 50px;
-  letter-spacing: 0.3px;
+/* ─── Content Grid ─── */
+.content-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px;
 }
-
-.cards {
-  display: flex;
-  gap: 30px;
-  justify-content: center;
-  flex-wrap: wrap;
+.content-header .count { font-size: 0.82rem; color: var(--text2); }
+.grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
 }
-
 .card {
-  width: 280px;
-  padding: 40px 30px;
-  border-radius: 20px;
-  background: rgba(255,255,255,0.04);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.08);
-  cursor: pointer;
-  text-decoration: none;
-  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  position: relative;
-  overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 28px 16px 22px; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border);
+  cursor: pointer; transition: all 0.25s cubic-bezier(0.25,0.46,0.45,0.94);
+  text-decoration: none; color: inherit; position: relative; overflow: hidden;
 }
-
 .card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 20px;
-  opacity: 0;
-  transition: opacity 0.35s;
-  pointer-events: none;
+  content: ''; position: absolute; inset: 0;
+  border-radius: var(--radius); opacity: 0;
+  transition: opacity 0.3s; pointer-events: none;
 }
-
-.card:nth-child(1)::before { background: radial-gradient(600px circle at var(--mx, 50%) var(--my, 50%), rgba(99,102,241,0.12), transparent 40%); }
-.card:nth-child(2)::before { background: radial-gradient(600px circle at var(--mx, 50%) var(--my, 50%), rgba(139,92,246,0.12), transparent 40%); }
-
-.card:hover {
-  transform: translateY(-6px) scale(1.02);
-  border-color: rgba(255,255,255,0.2);
-}
-
+.card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.18); }
 .card:hover::before { opacity: 1; }
-
-.card:active {
-  transform: translateY(-2px) scale(0.98);
+.card:active { transform: scale(0.97); }
+.card .card-icon { font-size: 2.2rem; margin-bottom: 12px; position: relative; z-index: 1; }
+.card .card-name {
+  font-size: 0.95rem; font-weight: 600; margin-bottom: 4px;
+  position: relative; z-index: 1; word-break: break-all;
 }
-
-.card-icon {
-  width: 64px; height: 64px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 20px;
-  font-size: 28px;
-  position: relative;
-  z-index: 1;
+.card .card-desc {
+  font-size: 0.78rem; color: var(--text2); line-height: 1.4;
+  position: relative; z-index: 1;
 }
-
-.card:nth-child(1) .card-icon {
-  background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(99,102,241,0.05));
-  color: #818cf8;
+.card .card-tag {
+  display: inline-block; padding: 2px 10px; border-radius: 10px;
+  font-size: 0.7rem; margin-top: 10px;
+  background: rgba(129,140,248,0.12); color: var(--accent);
+  position: relative; z-index: 1;
 }
+.card.folder .card-icon { font-size: 2.6rem; }
+.card.folder .card-name { color: var(--accent); }
+.card.folder::before { background: radial-gradient(400px circle at var(--mx,50%) var(--my,50%), rgba(99,102,241,0.08), transparent 50%); }
+.card.file::before { background: radial-gradient(400px circle at var(--mx,50%) var(--my,50%), rgba(139,92,246,0.06), transparent 50%); }
 
-.card:nth-child(2) .card-icon {
-  background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(139,92,246,0.05));
-  color: #a78bfa;
+/* ─── Empty ─── */
+.empty {
+  text-align: center; padding: 60px 20px; color: var(--text2);
+  grid-column: 1 / -1;
 }
+.empty .icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
 
-.card h2 {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: #fff;
-  margin-bottom: 10px;
-  position: relative;
-  z-index: 1;
-}
-
-.card p {
-  color: rgba(255,255,255,0.45);
-  font-size: 0.9rem;
-  line-height: 1.6;
-  position: relative;
-  z-index: 1;
-}
-
-.card-tag {
-  display: inline-block;
-  padding: 4px 14px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  margin-top: 16px;
-  position: relative;
-  z-index: 1;
-}
-
-.card:nth-child(1) .card-tag {
-  background: rgba(99,102,241,0.15);
-  color: #818cf8;
-}
-
-.card:nth-child(2) .card-tag {
-  background: rgba(139,92,246,0.15);
-  color: #a78bfa;
-}
-
-/* glow effect on hover */
-.card::after {
-  content: '';
-  position: absolute;
-  width: 120px; height: 120px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.04), transparent 70%);
-  top: var(--my, 50%);
-  left: var(--mx, 50%);
-  transform: translate(-50%, -50%);
-  opacity: 0;
-  transition: opacity 0.4s;
-  pointer-events: none;
-}
-
-.card:hover::after { opacity: 1; }
-
-.footer {
-  margin-top: 50px;
-  color: rgba(255,255,255,0.2);
-  font-size: 0.8rem;
-  letter-spacing: 0.5px;
-}
-
-@media (max-width: 640px) {
-  h1 { font-size: 2rem; }
-  .cards { gap: 20px; }
-  .card { width: 260px; padding: 30px 24px; }
+/* ─── Responsive ─── */
+@media (max-width: 600px) {
+  .container { padding: 16px 12px 40px; }
+  .header h1 { font-size: 1.3rem; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .card { padding: 20px 12px 18px; }
+  .card .card-icon { font-size: 1.8rem; }
+  .card.folder .card-icon { font-size: 2rem; }
 }
 </style>
 </head>
 <body>
 
-<div class="orb"></div>
-<div class="orb"></div>
-<div class="orb"></div>
-
 <div class="container">
-  <h1>探索空间</h1>
-  <p class="subtitle">选择你想体验的项目</p>
-
-  <div class="cards">
-    <a class="card" href="orbit.html" target="_blank"
-       onmousemove="this.style.setProperty('--mx', (event.offsetX)+'px');this.style.setProperty('--my', (event.offsetY)+'px')">
-      <div class="card-icon">🪐</div>
-      <h2>行星轨道模拟器</h2>
-      <p>实时引力物理引擎，拖拽创建天体，模拟行星轨道运动与碰撞</p>
-      <span class="card-tag">物理 · 交互</span>
-    </a>
-
-    <a class="card" href="mbti.html" target="_blank"
-       onmousemove="this.style.setProperty('--mx', (event.offsetX)+'px');this.style.setProperty('--my', (event.offsetY)+'px')">
-      <div class="card-icon">🧠</div>
-      <h2>MBTI 性格测试</h2>
-      <p>48题快速筛查与93题经典标准版，深入探索你的内在人格类型</p>
-      <span class="card-tag">心理 · 测评</span>
-    </a>
+  <!-- Header -->
+  <div class="header">
+    <h1>📁 导航</h1>
+    <div class="search-wrap">
+      <span class="icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="搜索文件或文件夹..." autocomplete="off">
+      <div class="search-results" id="searchResults"></div>
+    </div>
   </div>
 
-  <div class="footer">jing-xuan-yang.github.io</div>
+  <!-- Breadcrumb -->
+  <div class="breadcrumb" id="breadcrumb"></div>
+
+  <!-- Content -->
+  <div class="content-header">
+    <span></span>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="grid" id="grid"></div>
 </div>
 
+<script>
+// ══════════════════════════════════════════════
+// FILE SYSTEM DATA
+// ══════════════════════════════════════════════
+const FILES = [
+  {
+    name: 'tools', icon: '📂', desc: '工具集合',
+    children: [
+      { name: 'mbti.html', icon: '🧠', title: 'MBTI 性格测试', desc: '48题快速筛查与93题经典标准版', tag: '心理测评', url: 'tools/mbti.html' }
+    ]
+  },
+  {
+    name: 'games', icon: '🎮', desc: '游戏与娱乐',
+    children: [
+      { name: 'orbit.html', icon: '🪐', title: '行星轨道模拟器', desc: '实时引力物理引擎，模拟天体运动', tag: '物理交互', url: 'games/orbit.html' },
+      { name: '求解器.html', icon: '📐', title: '方程组求解器', desc: '二元一次方程组求解工具', tag: '数学工具', url: 'games/求解器.html' },
+      { name: '五子棋.html', icon: '⚫', title: '五子棋', desc: '经典五子棋对弈', tag: '棋类', url: 'games/五子棋.html' },
+      { name: '数独 (2) (2)~~~~~ (1).html', icon: '🔢', title: '数独', desc: '经典数独益智游戏', tag: '益智', url: 'games/数独 (2) (2)~~~~~ (1).html' },
+      { name: '羊了个羊1 (1) (1).html', icon: '🐑', title: '羊了个羊', desc: '趣味消除小游戏', tag: '休闲', url: 'games/羊了个羊1 (1) (1).html' }
+    ]
+  }
+];
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let currentPath = [];   // indices into FILES tree: e.g. [] = root, [0] = tools, [0,1] = tools > mbti
+let searchActive = false;
+
+// ══════════════════════════════════════════════
+// TREE HELPERS
+// ══════════════════════════════════════════════
+function getNode(path) {
+  let node = { children: FILES };
+  for (let idx of path) {
+    node = node.children[idx];
+  }
+  return node;
+}
+
+function getParent(path) {
+  if (path.length === 0) return null;
+  return path.slice(0, -1);
+}
+
+function isFolder(node) {
+  return node && node.children !== undefined;
+}
+
+function getBreadcrumbItems(path) {
+  let items = [{ name: '首页', path: [] }];
+  let current = FILES;
+  for (let i = 0; i < path.length; i++) {
+    let idx = path[i];
+    items.push({ name: current[idx].name, path: path.slice(0, i + 1) });
+    current = current[idx].children;
+  }
+  return items;
+}
+
+// ══════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════
+function render() {
+  if (searchActive) return;
+  const node = getNode(currentPath);
+
+  // Breadcrumb
+  renderBreadcrumb();
+
+  // Grid
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  if (!node || !node.children || node.children.length === 0) {
+    grid.innerHTML = '<div class="empty"><div class="icon">📭</div><div>此文件夹为空</div></div>';
+    document.getElementById('count').textContent = '0 个项目';
+    return;
+  }
+
+  const children = node.children;
+  document.getElementById('count').textContent = `${children.length} 个项目`;
+
+  children.forEach((item, idx) => {
+    const card = document.createElement('a');
+    const childPath = [...currentPath, idx];
+    const isFld = isFolder(item);
+
+    card.className = `card ${isFld ? 'folder' : 'file'}`;
+    card.onmousemove = function(e) {
+      const r = this.getBoundingClientRect();
+      this.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      this.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    };
+
+    if (isFld) {
+      card.href = '#';
+      card.onclick = function(e) {
+        e.preventDefault();
+        currentPath = childPath;
+        render();
+      };
+      card.innerHTML = `
+        <div class="card-icon">${item.icon || '📁'}</div>
+        <div class="card-name">${item.name}</div>
+        <div class="card-desc">${item.desc || ''}</div>
+      `;
+    } else {
+      card.href = item.url || item.name;
+      card.target = '_blank';
+      card.innerHTML = `
+        <div class="card-icon">${item.icon || '📄'}</div>
+        <div class="card-name">${item.title || item.name}</div>
+        <div class="card-desc">${item.desc || ''}</div>
+        ${item.tag ? `<span class="card-tag">${item.tag}</span>` : ''}
+      `;
+    }
+
+    grid.appendChild(card);
+  });
+}
+
+function renderBreadcrumb() {
+  const el = document.getElementById('breadcrumb');
+  const items = getBreadcrumbItems(currentPath);
+  const parent = getParent(currentPath);
+
+  let html = '';
+  // back button
+  if (parent !== null) {
+    html += `<span class="back-btn" onclick="currentPath=[];render()">← 返回</span>`;
+  } else {
+    html += `<span class="back-btn" style="opacity:0.3;pointer-events:none;border-color:transparent;">← 返回</span>`;
+  }
+
+  items.forEach((item, i) => {
+    if (i > 0) html += `<span class="sep">›</span>`;
+    const isLast = i === items.length - 1;
+    if (isLast) {
+      html += `<span class="item active">${item.name}</span>`;
+    } else {
+      html += `<span class="item" onclick="currentPath=[${item.path.join(',')}];render()">${item.name}</span>`;
+    }
+  });
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+// SEARCH
+// ══════════════════════════════════════════════
+function flatten(node, path, results) {
+  if (!node.children) return;
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i];
+    const childPath = [...path, child.name];
+    const displayName = child.title || child.name;
+    results.push({ ...child, displayName, fullPath: childPath, indexPath: [...path, i] });
+    if (child.children) {
+      flatten(child, childPath, results);
+    }
+  }
+}
+
+function search(query) {
+  const el = document.getElementById('searchResults');
+  if (!query.trim()) { el.classList.remove('show'); searchActive = false; render(); return; }
+
+  searchActive = true;
+  const q = query.toLowerCase();
+  const all = [];
+  flatten({ children: FILES }, [], all);
+
+  const matches = all.filter(item => {
+    const name = (item.displayName + ' ' + item.name).toLowerCase();
+    return name.includes(q);
+  });
+
+  if (matches.length === 0) {
+    el.innerHTML = '<div class="item" style="cursor:default;opacity:0.5;justify-content:center;">无匹配结果</div>';
+  } else {
+    el.innerHTML = matches.slice(0, 20).map(item => {
+      const nameHtml = highlightMatch(item.displayName, q);
+      const pathHtml = '首页 / ' + item.fullPath.join(' / ');
+      const icon = item.icon || (item.children ? '📁' : '📄');
+      const clickAction = item.children
+        ? `onclick="goToPath([${item.indexPath.join(',')}]);document.getElementById('searchInput').value='';document.getElementById('searchResults').classList.remove('show');searchActive=false;render()"`
+        : `onclick="window.open('${item.url || item.name}','_blank')"`;
+      return `<div class="item" ${clickAction}>
+        <span class="icon">${icon}</span>
+        <div class="info">
+          <div class="name">${nameHtml}</div>
+          <div class="path">${pathHtml}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  el.classList.add('show');
+}
+
+function highlightMatch(text, query) {
+  const idx = text.toLowerCase().indexOf(query);
+  if (idx === -1) return text;
+  return text.slice(0, idx) + '<em>' + text.slice(idx, idx + query.length) + '</em>' + text.slice(idx + query.length);
+}
+
+function goToPath(path) {
+  currentPath = path;
+  searchActive = false;
+  render();
+}
+
+// Search input
+document.getElementById('searchInput').addEventListener('input', function() {
+  search(this.value);
+});
+document.getElementById('searchInput').addEventListener('blur', function() {
+  setTimeout(() => {
+    document.getElementById('searchResults').classList.remove('show');
+    if (!this.value.trim()) { searchActive = false; render(); }
+  }, 200);
+});
+document.getElementById('searchInput').addEventListener('focus', function() {
+  if (this.value.trim()) {
+    search(this.value);
+  }
+});
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+render();
+</script>
 </body>
 </html>

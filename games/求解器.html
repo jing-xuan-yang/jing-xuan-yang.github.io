@@ -1,0 +1,599 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>二元一次方程组求解器</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f7fb; color: #222; }
+    h1 { margin-top: 0; }
+    .card { background: #ffffff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); padding: 24px; max-width: 840px; margin: 0 auto; }
+    .field { margin-bottom: 16px; }
+    label { display: block; margin-bottom: 6px; font-weight: 600; }
+    input[type=text], textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font-size: 16px; }
+    button { background: #2563eb; color: white; border: none; border-radius: 10px; padding: 12px 20px; font-size: 16px; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    pre { background: #0f172a; color: #f8fafc; padding: 16px; border-radius: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+    .footer { margin-top: 20px; color: #475569; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>二元一次方程组求解器-杨景轩</h1>
+    <p>输入一到三个线性方程，支持：整数、分数、小数、负号、括号、乘除和任意变量名。</p>
+
+    <div class="field">
+      <label for="eq1">方程 1</label>
+      <input id="eq1" type="text" value="28/25*x + 11/10*y = 400">
+    </div>
+
+    <div class="field">
+      <label for="eq2">方程 2</label>
+      <input id="eq2" type="text" value="5*x - 3*y = 7">
+    </div>
+
+    <div class="field">
+      <label for="eq3">方程 3（可选，三元一次时填写）</label>
+      <input id="eq3" type="text" placeholder="例如: x + y + z = 6">
+    </div>
+
+    <div class="field">
+      <label><input id="trace" type="checkbox"> 显示详细求解过程</label>
+    </div>
+
+    <div class="field">
+      <label for="method">求解方法</label>
+      <select id="method">
+        <option value="auto">自动</option>
+        <option value="elimination">加减消元</option>
+        <option value="substitution">代入</option>
+      </select>
+    </div>
+
+    <button id="solveBtn">求解方程组</button>
+
+    <div class="field">
+      <label>结果</label>
+      <pre id="output">点击“求解方程组”开始。</pre>
+    </div>
+  </div>
+  <div class="footer">杨景轩制作</div>
+
+  <script>
+    class MyFraction {
+      constructor(value = 0, denominator = null) {
+        this.numerator = 0;
+        this.denominator = 1;
+
+        if (denominator !== null) {
+          this.numerator = Number(value);
+          this.denominator = Number(denominator);
+        } else if (value instanceof MyFraction) {
+          this.numerator = value.numerator;
+          this.denominator = value.denominator;
+        } else if (typeof value === 'number') {
+          if (Number.isInteger(value)) {
+            this.numerator = value;
+          } else {
+            const text = value.toString();
+            const parts = text.split('.');
+            const denom = Math.pow(10, parts[1].length);
+            this.numerator = Math.round(value * denom);
+            this.denominator = denom;
+          }
+        } else if (typeof value === 'string') {
+          const text = value.trim();
+          if (text.includes('/')) {
+            const parts = text.split('/');
+            this.numerator = Number(parts[0]);
+            this.denominator = Number(parts[1]);
+          } else if (text.includes('.')) {
+            const parts = text.split('.');
+            const denom = Math.pow(10, parts[1].length);
+            this.numerator = Number(parts[0]) * denom + Number(parts[1]) * (text[0] === '-' ? -1 : 1);
+            this.denominator = denom;
+          } else {
+            this.numerator = Number(text);
+          }
+        } else {
+          throw new TypeError('不支持的数值类型: ' + typeof value);
+        }
+
+        this.simplify();
+      }
+
+      simplify() {
+        if (this.denominator < 0) {
+          this.numerator = -this.numerator;
+          this.denominator = -this.denominator;
+        }
+        let a = Math.abs(this.numerator);
+        let b = Math.abs(this.denominator);
+        while (b !== 0) {
+          const t = b;
+          b = a % b;
+          a = t;
+        }
+        const gcd = a;
+        if (gcd > 1) {
+          this.numerator /= gcd;
+          this.denominator /= gcd;
+        }
+      }
+
+      add(other) {
+        if (!(other instanceof MyFraction)) other = new MyFraction(other);
+        return new MyFraction(this.numerator * other.denominator + other.numerator * this.denominator, this.denominator * other.denominator);
+      }
+
+      sub(other) {
+        if (!(other instanceof MyFraction)) other = new MyFraction(other);
+        return new MyFraction(this.numerator * other.denominator - other.numerator * this.denominator, this.denominator * other.denominator);
+      }
+
+      mul(other) {
+        if (!(other instanceof MyFraction)) other = new MyFraction(other);
+        return new MyFraction(this.numerator * other.numerator, this.denominator * other.denominator);
+      }
+
+      div(other) {
+        if (!(other instanceof MyFraction)) other = new MyFraction(other);
+        if (other.numerator === 0) throw new Error('除数不能为零');
+        return new MyFraction(this.numerator * other.denominator, this.denominator * other.numerator);
+      }
+
+      neg() {
+        return new MyFraction(-this.numerator, this.denominator);
+      }
+
+      equals(other) {
+        if (!(other instanceof MyFraction)) other = new MyFraction(other);
+        return this.numerator === other.numerator && this.denominator === other.denominator;
+      }
+
+      toString() {
+        if (this.denominator === 1) return String(this.numerator);
+        return `${this.numerator}/${this.denominator}`;
+      }
+    }
+
+    class RobustEquationSolver {
+      constructor(verbose = false) {
+        this.verbose = verbose;
+        this.steps = [];
+      }
+
+      log(...args) {
+        const text = args.join(' ');
+        this.steps.push(text);
+        if (this.verbose) {
+          console.log(text);
+        }
+      }
+
+      parseEquation(eqStr) {
+        this.log(`原式: ${eqStr}`);
+        eqStr = eqStr.replace(/\s+/g, '');
+        if (!eqStr.includes('=')) throw new Error("方程必须包含等号 '='");
+        const [left, right] = eqStr.split('=', 2);
+        const coeffsLeft = this.parseExpression(left);
+        const coeffsRight = this.parseExpression(right);
+        this.log(`解析左侧: ${left} -> ${JSON.stringify(coeffsLeft)}`);
+        this.log(`解析右侧: ${right} -> ${JSON.stringify(coeffsRight)}`);
+        const combined = {};
+        for (const key in coeffsLeft) {
+          combined[key] = (combined[key] || new MyFraction(0)).add(coeffsLeft[key]);
+        }
+        for (const key in coeffsRight) {
+          combined[key] = (combined[key] || new MyFraction(0)).sub(coeffsRight[key]);
+        }
+        this.log(`合并项(左-右): ${JSON.stringify(this.toSimpleObject(combined))}`);
+        const constant = combined.const || new MyFraction(0);
+        delete combined.const;
+        const vars = Object.keys(combined);
+        if (vars.length) {
+          const stdLeft = vars.map(v => `(${combined[v]})${v}`).join(' + ');
+          this.log(`移项整理为: ${stdLeft} = ${constant.neg()}`);
+        } else {
+          this.log(`移项整理为: 0 = ${constant.neg()}`);
+        }
+        return {coeffs: combined, constant: constant.neg()};
+      }
+
+      toSimpleObject(coeffs) {
+        const obj = {};
+        for (const key in coeffs) obj[key] = coeffs[key].toString();
+        return obj;
+      }
+
+      tokenize(expr) {
+        const pattern = /\d+\.\d+|\d+\/\d+|\d+|[A-Za-z]+|[()+\-*/]/g;
+        const tokens = expr.match(pattern) || [];
+        if (tokens.join('') !== expr) throw new Error(`无法解析表达式: ${expr}`);
+        this.log(`标记化 '${expr}' -> ${JSON.stringify(tokens)}`);
+        return tokens;
+      }
+
+      parseExpression(expr) {
+        this.tokens = this.tokenize(expr);
+        this.pos = 0;
+        const coeffs = this.parseSum();
+        if (this.pos !== this.tokens.length) throw new Error(`无法解析表达式: ${expr}`);
+        return coeffs;
+      }
+
+      peek() {
+        return this.tokens[this.pos] ?? null;
+      }
+
+      next() {
+        return this.tokens[this.pos++] ?? null;
+      }
+
+      parseSum() {
+        let coeffs = this.parseProduct();
+        while (['+', '-'].includes(this.peek())) {
+          const op = this.next();
+          const rhs = this.parseProduct();
+          if (op === '+') coeffs = this.addCoeffs(coeffs, rhs);
+          else coeffs = this.addCoeffs(coeffs, this.scaleCoeffs(rhs, new MyFraction(-1)));
+        }
+        return coeffs;
+      }
+
+      parseProduct() {
+        let coeffs = this.parseFactor();
+        while (true) {
+          const tok = this.peek();
+          if (tok === '*' || tok === '/') {
+            const op = this.next();
+            const rhs = this.parseFactor();
+            coeffs = op === '*' ? this.mulCoeffs(coeffs, rhs) : this.divCoeffs(coeffs, rhs);
+            continue;
+          }
+          if (tok !== null && !['+', '-', ')'].includes(tok)) {
+            const rhs = this.parseFactor();
+            coeffs = this.mulCoeffs(coeffs, rhs);
+            continue;
+          }
+          break;
+        }
+        return coeffs;
+      }
+
+      parseFactor() {
+        const tok = this.peek();
+        if (tok === null) throw new Error('表达式不完整');
+        if (tok === '+') {
+          this.next();
+          return this.parseFactor();
+        }
+        if (tok === '-') {
+          this.next();
+          return this.scaleCoeffs(this.parseFactor(), new MyFraction(-1));
+        }
+        if (tok === '(') {
+          this.next();
+          const coeffs = this.parseSum();
+          if (this.next() !== ')') throw new Error('括号不匹配');
+          return coeffs;
+        }
+        if (/^\d+\.\d+$/.test(tok) || /^\d+\/\d+$/.test(tok) || /^\d+$/.test(tok)) {
+          this.next();
+          return {const: new MyFraction(tok)};
+        }
+        if (/^[A-Za-z]+$/.test(tok)) {
+          this.next();
+          return {[tok]: new MyFraction(1)};
+        }
+        throw new Error(`无法解析因子: ${tok}`);
+      }
+
+      addCoeffs(a, b) {
+        const result = {...a};
+        for (const key in b) result[key] = (result[key] || new MyFraction(0)).add(b[key]);
+        return result;
+      }
+
+      scaleCoeffs(coeffs, factor) {
+        const result = {};
+        for (const key in coeffs) result[key] = coeffs[key].mul(factor);
+        return result;
+      }
+
+      isConstant(coeffs) {
+        return Object.keys(coeffs).every(key => key === 'const' || coeffs[key].equals(new MyFraction(0)));
+      }
+
+      mulCoeffs(a, b) {
+        const aVars = Object.keys(a).filter(k => k !== 'const' && !a[k].equals(new MyFraction(0)));
+        const bVars = Object.keys(b).filter(k => k !== 'const' && !b[k].equals(new MyFraction(0)));
+        if (aVars.length && bVars.length) throw new Error('不支持变量与变量相乘的非线性表达式');
+        if (this.isConstant(a)) return this.scaleCoeffs(b, a.const);
+        if (this.isConstant(b)) return this.scaleCoeffs(a, b.const);
+        return this.scaleCoeffs(a, b.const || new MyFraction(0));
+      }
+
+      divCoeffs(a, b) {
+        const bVars = Object.keys(b).filter(k => k !== 'const' && !b[k].equals(new MyFraction(0)));
+        if (bVars.length) throw new Error('不支持除以变量的表达式');
+        const denom = b.const || new MyFraction(0);
+        if (denom.equals(new MyFraction(0))) throw new Error('除数不能为零');
+        return this.scaleCoeffs(a, new MyFraction(denom.denominator, denom.numerator));
+      }
+
+      solveSystem(equations, method = 'auto') {
+        this.steps = [];
+        const parsed = equations.map((eq, index) => {
+          const parsedEq = this.parseEquation(eq);
+          parsedEq.original = eq;
+          parsedEq.index = index + 1;
+          return parsedEq;
+        });
+
+        const coeffMap = {};
+        const constants = [];
+        parsed.forEach(item => {
+          Object.assign(coeffMap, item.coeffs);
+          constants.push(item.constant);
+        });
+
+        const variables = [...new Set(Object.keys(coeffMap).filter(k => k !== 'const'))];
+        if (variables.length > 3) return {error: '结果: 最多支持三个未知数'};
+        if (variables.length === 0) {
+          const allSame = parsed.every(item => item.constant.equals(parsed[0].constant));
+          return {result: allSame ? '结果: 方程组有无穷多解' : '结果: 方程组无解', steps: this.steps};
+        }
+
+        if (equations.length === 1) {
+          if (variables.length === 1) {
+            return this.wrapResult(this.solveSingleEquation(parsed[0], variables[0]));
+          }
+          return this.wrapResult({error: '结果: 单个方程无法确定多个未知数'});
+        }
+
+        if (variables.length === 1) {
+          return this.wrapResult(this.solveTwoEquationOneVariable(parsed, variables[0]));
+        }
+
+        if (variables.length === 2 && equations.length >= 2) {
+          return this.wrapResult(this.solveTwoVariables(parsed.slice(0, 2), variables, method));
+        }
+
+        if (variables.length === 3 && equations.length >= 3) {
+          return this.wrapResult(this.solveThreeVariables(parsed.slice(0, 3), variables));
+        }
+
+        return this.wrapResult({error: '结果: 方程数与未知数不匹配，无法求解'});
+      }
+
+      wrapResult(result) {
+        if (!result.steps) result.steps = [];
+        result.steps = this.steps.concat(result.steps);
+        return result;
+      }
+
+      solveByElimination(v1, v2, a1, b1, c1, a2, b2, c2) {
+        const steps = [];
+        steps.push(`使用加减消元法消去 ${v2}。`);
+        const m1a = a1.mul(b2);
+        const m1b = b1.mul(b2);
+        const m1c = c1.mul(b2);
+        const m2a = a2.mul(b1);
+        const m2b = b2.mul(b1);
+        const m2c = c2.mul(b1);
+        steps.push(`方程1乘以 ${b2} 得: (${m1a})${v1} + (${m1b})${v2} = ${m1c}`);
+        steps.push(`方程2乘以 ${b1} 得: (${m2a})${v1} + (${m2b})${v2} = ${m2c}`);
+        const D = m1a.sub(m2a);
+        const Dx = m1c.sub(m2c);
+        steps.push(`两式相减消去 ${v2}，得到: (${D})${v1} = ${Dx}`);
+        if (D.equals(new MyFraction(0))) {
+          if (Dx.equals(new MyFraction(0))) return {result: '结果: 方程组可能有无穷多解', steps};
+          return {result: '结果: 方程组无解', steps};
+        }
+        const x1 = Dx.div(D);
+        steps.push(`解得 ${v1} = ${Dx} / ${D} = ${x1}`);
+        const chosenEq = !b1.equals(new MyFraction(0)) ? 1 : 2;
+        const v2Value = chosenEq === 1
+          ? c1.sub(a1.mul(x1)).div(b1)
+          : c2.sub(a2.mul(x1)).div(b2);
+        steps.push(`代回方程${chosenEq}求 ${v2}: ${chosenEq === 1 ? `(${c1} - (${a1})${v1}) / ${b1}` : `(${c2} - (${a2})${v1}) / ${b2}`} = ${v2Value}`);
+        return {solution: {[v1]: x1, [v2]: v2Value}, steps};
+      }
+
+      solveBySubstitution(v1, v2, a1, b1, c1, a2, b2, c2) {
+        const steps = [];
+        if (!a1.equals(new MyFraction(0))) {
+          steps.push(`使用代入法。先从方程1解出 ${v1}。`);
+          steps.push(`方程1表示为: ${v1} = (${c1} - (${b1})${v2}) / ${a1}`);
+          const alpha = a2.div(a1).mul(b1).neg();
+          const beta = a2.div(a1).mul(c1);
+          steps.push(`将 ${v1} 代入方程2: ${a2}*(${c1} - ${b1}${v2})/${a1} + ${b2}${v2} = ${c2}`);
+          steps.push(`化简得: (${alpha})${v2} + (${b2})${v2} = ${c2} - ${beta}`);
+          const combinedCoeff = alpha.add(b2);
+          const combinedConst = c2.sub(beta);
+          steps.push(`整理得: (${combinedCoeff})${v2} = ${combinedConst}`);
+          if (combinedCoeff.equals(new MyFraction(0))) {
+            if (combinedConst.equals(new MyFraction(0))) return {result: '结果: 方程组可能有无穷多解', steps};
+            return {result: '结果: 方程组无解', steps};
+          }
+          const val2 = combinedConst.div(combinedCoeff);
+          steps.push(`解得 ${v2} = ${combinedConst} / ${combinedCoeff} = ${val2}`);
+          const val1 = c1.sub(b1.mul(val2)).div(a1);
+          steps.push(`代回方程1求 ${v1} = (${c1} - (${b1})${v2}) / ${a1} = ${val1}`);
+          return {solution: {[v1]: val1, [v2]: val2}, steps};
+        }
+
+        if (!a2.equals(new MyFraction(0))) {
+          steps.push(`使用代入法。先从方程2解出 ${v1}。`);
+          steps.push(`方程2表示为: ${v1} = (${c2} - (${b2})${v2}) / ${a2}`);
+          const alpha = a1.div(a2).mul(b2).neg();
+          const beta = a1.div(a2).mul(c2);
+          steps.push(`将 ${v1} 代入方程1: ${a1}*(${c2} - ${b2}${v2})/${a2} + ${b1}${v2} = ${c1}`);
+          steps.push(`化简得: (${alpha})${v2} + (${b1})${v2} = ${c1} - ${beta}`);
+          const combinedCoeff = alpha.add(b1);
+          const combinedConst = c1.sub(beta);
+          steps.push(`整理得: (${combinedCoeff})${v2} = ${combinedConst}`);
+          if (combinedCoeff.equals(new MyFraction(0))) {
+            if (combinedConst.equals(new MyFraction(0))) return {result: '结果: 方程组可能有无穷多解', steps};
+            return {result: '结果: 方程组无解', steps};
+          }
+          const val2 = combinedConst.div(combinedCoeff);
+          steps.push(`解得 ${v2} = ${combinedConst} / ${combinedCoeff} = ${val2}`);
+          const val1 = c2.sub(b2.mul(val2)).div(a2);
+          steps.push(`代回方程2求 ${v1} = (${c2} - (${b2})${v2}) / ${a2} = ${val1}`);
+          return {solution: {[v1]: val1, [v2]: val2}, steps};
+        }
+
+        if (!b1.equals(new MyFraction(0))) {
+          steps.push(`使用代入法。先从方程1解出 ${v2}。`);
+          steps.push(`方程1表示为: ${v2} = ${c1} / ${b1}`);
+          const val2 = c1.div(b1);
+          steps.push(`解得 ${v2} = ${val2}`);
+          if (a2.equals(new MyFraction(0))) {
+            return {result: '结果: 无法使用代入法求解此方程组', steps};
+          }
+          const val1 = c2.sub(b2.mul(val2)).div(a2);
+          steps.push(`代回方程2求 ${v1} = (${c2} - (${b2})${v2}) / ${a2} = ${val1}`);
+          return {solution: {[v1]: val1, [v2]: val2}, steps};
+        }
+
+        if (!b2.equals(new MyFraction(0))) {
+          steps.push(`使用代入法。先从方程2解出 ${v2}。`);
+          steps.push(`方程2表示为: ${v2} = ${c2} / ${b2}`);
+          const val2 = c2.div(b2);
+          steps.push(`解得 ${v2} = ${val2}`);
+          if (a1.equals(new MyFraction(0))) {
+            return {result: '结果: 无法使用代入法求解此方程组', steps};
+          }
+          const val1 = c1.sub(b1.mul(val2)).div(a1);
+          steps.push(`代回方程1求 ${v1} = (${c1} - (${b1})${v2}) / ${a1} = ${val1}`);
+          return {solution: {[v1]: val1, [v2]: val2}, steps};
+        }
+
+        return {result: '结果: 无法使用代入法求解此方程组', steps};
+      }
+      solveSingleEquation(parsed, variable) {
+        const steps = [];
+        steps.push(`单个方程求解：${parsed.original}`);
+        const coeff = parsed.coeffs[variable] || new MyFraction(0);
+        const constant = parsed.constant;
+        if (coeff.equals(new MyFraction(0))) {
+          return {result: '结果: 无法求解，方程中没有该变量或系数为0', steps};
+        }
+        steps.push(`移项得到：${coeff}${variable} = ${constant}`);
+        const value = constant.div(coeff);
+        steps.push(`两边同除以 ${coeff}，得 ${variable} = ${value}`);
+        return {solution: {[variable]: value}, steps};
+      }
+      solveTwoEquationOneVariable(parsed, variable) {
+        const steps = [];
+        steps.push(`两个方程，一个变量 ${variable} 的求解。`);
+        const a1 = parsed[0].coeffs[variable] || new MyFraction(0);
+        const a2 = parsed[1].coeffs[variable] || new MyFraction(0);
+        const c1 = parsed[0].constant;
+        const c2 = parsed[1].constant;
+        if (a1.equals(new MyFraction(0)) && a2.equals(new MyFraction(0))) {
+          if (c1.equals(c2)) return {result: '结果: 方程组有无穷多解', steps};
+          return {result: '结果: 方程组无解', steps};
+        }
+        const resultValue = a1.equals(new MyFraction(0)) ? c2.div(a2) : c1.div(a1);
+        steps.push(`直接解得 ${variable} = ${resultValue}`);
+        return {solution: {[variable]: resultValue}, steps};
+      }
+      solveTwoVariables(parsed, variables, method) {
+        const [v1, v2] = variables;
+        const a1 = parsed[0].coeffs[v1] || new MyFraction(0);
+        const b1 = parsed[0].coeffs[v2] || new MyFraction(0);
+        const c1 = parsed[0].constant;
+        const a2 = parsed[1].coeffs[v1] || new MyFraction(0);
+        const b2 = parsed[1].coeffs[v2] || new MyFraction(0);
+        const c2 = parsed[1].constant;
+        if (method === 'substitution') {
+          return this.solveBySubstitution(v1, v2, a1, b1, c1, a2, b2, c2);
+        }
+        return this.solveByElimination(v1, v2, a1, b1, c1, a2, b2, c2);
+      }
+      solveThreeVariables(parsed, variables) {
+        const steps = [];
+        steps.push('使用加减消元法求解三元一次方程组。');
+        const matrix = parsed.map(item => {
+          return variables.map(v => item.coeffs[v] || new MyFraction(0)).concat([item.constant]);
+        });
+        for (let pivot = 0; pivot < 2; pivot++) {
+          if (matrix[pivot][pivot].equals(new MyFraction(0))) {
+            let swapRow = pivot + 1;
+            while (swapRow < 3 && matrix[swapRow][pivot].equals(new MyFraction(0))) swapRow++;
+            if (swapRow < 3) {
+              [matrix[pivot], matrix[swapRow]] = [matrix[swapRow], matrix[pivot]];
+              steps.push(`交换方程${pivot + 1}和方程${swapRow + 1}`);
+            }
+          }
+          const pivotValue = matrix[pivot][pivot];
+          for (let row = pivot + 1; row < 3; row++) {
+            if (matrix[row][pivot].equals(new MyFraction(0))) continue;
+            const factor = matrix[row][pivot].div(pivotValue);
+            steps.push(`用方程${row + 1}减去方程${pivot + 1}*(${factor})`);
+            for (let col = pivot; col < 4; col++) {
+              matrix[row][col] = matrix[row][col].sub(matrix[pivot][col].mul(factor));
+            }
+            steps.push(`得到方程${row + 1}: ${this.formatRow(matrix[row], variables)}`);
+          }
+        }
+        if (matrix[2][2].equals(new MyFraction(0))) {
+          return {result: '结果: 三元一次方程组可能无解或无穷多解', steps};
+        }
+        const z = matrix[2][3].div(matrix[2][2]);
+        steps.push(`解 z: ${matrix[2][2]}z = ${matrix[2][3]} => z = ${z}`);
+        const y = matrix[1][3].sub(matrix[1][2].mul(z)).div(matrix[1][1]);
+        steps.push(`解 y: ${matrix[1][1]}y = ${matrix[1][3]} - ${matrix[1][2]}z => y = ${y}`);
+        const x = matrix[0][3].sub(matrix[0][1].mul(y)).sub(matrix[0][2].mul(z)).div(matrix[0][0]);
+        steps.push(`解 x: ${matrix[0][0]}x = ${matrix[0][3]} - ${matrix[0][1]}y - ${matrix[0][2]}z => x = ${x}`);
+        return {solution: {[variables[0]]: x, [variables[1]]: y, [variables[2]]: z}, steps};
+      }
+      formatRow(row, variables) {
+        const terms = [];
+        for (let i = 0; i < variables.length; i++) {
+          if (!row[i].equals(new MyFraction(0))) {
+            terms.push(`(${row[i]})${variables[i]}`);
+          }
+        }
+        return terms.join(' + ') + ' = ' + row[3];
+      }
+    }
+
+    document.getElementById('solveBtn').addEventListener('click', () => {
+      const eq1 = document.getElementById('eq1').value.trim();
+      const eq2 = document.getElementById('eq2').value.trim();
+      const verbose = document.getElementById('trace').checked;
+      const output = document.getElementById('output');
+      const eq3 = document.getElementById('eq3').value.trim();
+      if (!eq1 && !eq2 && !eq3) {
+        output.textContent = '请填写至少一个方程。';
+        return;
+      }
+      const method = document.getElementById('method').value;
+      const solver = new RobustEquationSolver(verbose);
+      try {
+        const equations = [eq1, eq2, eq3].filter(line => line.length > 0);
+        const result = solver.solveSystem(equations, method);
+      if (result.error) {
+        output.textContent = result.error;
+        if (result.steps) output.textContent += '\n\n详细步骤:\n' + result.steps.join('\n');
+        return;
+      }
+      if (result.result) {
+        output.textContent = result.result;
+        if (result.steps) output.textContent += '\n\n详细步骤:\n' + result.steps.join('\n');
+        return;
+      }
+      const lines = Object.entries(result.solution).map(([k, v]) => `${k} = ${v}`);
+      output.textContent = '求解成功:\n' + lines.join('\n');
+      if (result.steps) output.textContent += '\n\n详细步骤:\n' + result.steps.join('\n');
+      } catch (err) {
+        output.textContent = '解析错误: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
