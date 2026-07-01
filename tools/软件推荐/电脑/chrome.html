@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>下载 Geek Uninstaller</title>
+    <title>下载 Google Chrome</title>
     <style>
         /* 设置页面基础样式，让内容垂直水平居中 */
         body, html {
@@ -16,25 +16,52 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
-        /* 按钮样式 */
+        /* 按钮容器，用于垂直排列按钮 */
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px; /* 按钮之间的间距 */
+            text-align: center;
+        }
+
+        /* 通用按钮样式 */
         .download-btn {
             display: inline-block;
             padding: 15px 30px;
             font-size: 18px;
             font-weight: bold;
             color: #ffffff;
-            background-color: #007BFF; /* 蓝色背景 */
             border: none;
             border-radius: 8px;
             text-decoration: none; /* 去掉下划线 */
             cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.1s ease;
+            transition: transform 0.1s ease, opacity 0.2s ease;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            min-width: 280px;
         }
 
-        /* 鼠标悬停效果 */
-        .download-btn:hover {
-            background-color: #0056b3;
+        /* 64位按钮样式 (Google 蓝) */
+        .btn-64 {
+            background-color: #4285F4;
+        }
+        .btn-64:hover {
+            background-color: #357ae8;
+        }
+
+        /* 32位按钮样式 (稍深的蓝色) */
+        .btn-32 {
+            background-color: #3367D6;
+        }
+        .btn-32:hover {
+            background-color: #2a5ac7;
+        }
+
+        /* 自动判断按钮样式 (灰色) */
+        .btn-auto {
+            background-color: #5f6368;
+        }
+        .btn-auto:hover {
+            background-color: #4a4e52;
         }
 
         /* 点击效果 */
@@ -45,9 +72,16 @@
 </head>
 <body>
 
-    <!-- 使用 a 标签模拟按钮，点击跳转至指定链接 -->
-    <a href="https://geekuninstaller.com/download" class="download-btn">下载geek.7z</a>
+    <div class="button-container">
+        <!-- 64位下载按钮 -->
+        <a href="https://www.google.cn/chrome/?standalone=1&platform=win64" class="download-btn btn-64">64位 Chrome 下载</a>
+
+        <!-- 32位下载按钮 -->
+        <a href="https://www.google.cn/chrome/?standalone=1&platform=win32" class="download-btn btn-32">32位 Chrome 下载</a>
+
+        <!-- 自动判断下载按钮 -->
+        <a href="https://www.google.cn/chrome/?standalone=1" class="download-btn btn-auto">自动判断版本下载</a>
+    </div>
 
 </body>
 </html>
-
