@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>手速测试</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh; display: flex; flex-direction: column;
+  background: #0c0c18; color: #e8e8f0;
+  transition: background 0.3s, color 0.3s;
+  user-select: none; -webkit-user-select: none;
+}
+.container { max-width: 600px; margin: 0 auto; padding: 30px 20px 60px; width: 100%; flex: 1; display: flex; flex-direction: column; }
+
+.header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.header h1 { font-size: 1.4rem; font-weight: 800; cursor: default; }
+.back-btn {
+  width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);
+  cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center;
+  transition: 0.2s; background: transparent; color: #e8e8f0; text-decoration: none;
+  flex-shrink: 0;
+}
+.back-btn:hover { transform: scale(1.1); border-color: #818cf8; }
+
+.subtitle { font-size: 0.82rem; color: rgba(255,255,255,0.45); margin-bottom: 24px; }
+
+.time-selector {
+  display: flex; gap: 8px; margin-bottom: 16px; justify-content: center;
+}
+.time-btn {
+  padding: 8px 20px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);
+  font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.15s;
+  background: transparent; color: rgba(255,255,255,0.6);
+}
+.time-btn:hover { border-color: #818cf8; color: #e8e8f0; }
+.time-btn.active { background: #818cf8; border-color: #818cf8; color: #fff; }
+
+.click-area {
+  flex: 1; min-height: 300px; border-radius: 20px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.2s, transform 0.1s;
+  background: #1e1e3a; border: 2px solid rgba(255,255,255,0.08);
+  position: relative; overflow: hidden;
+}
+.click-area:active { transform: scale(0.99); }
+.click-area.running { background: #1a2a3a; border-color: rgba(80,160,255,0.3); }
+.click-area.finished { background: #1a3a2a; border-color: rgba(80,255,160,0.3); }
+.click-area .click-count {
+  font-size: 4rem; font-weight: 800; pointer-events: none;
+  transition: transform 0.1s;
+}
+.click-area .click-label {
+  font-size: 0.9rem; pointer-events: none; margin-top: 4px;
+  color: rgba(255,255,255,0.35);
+}
+.click-area .timer {
+  font-size: 2rem; font-weight: 700; pointer-events: none; margin-top: 12px;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s;
+}
+.click-area .timer.urgent { color: #ff6b6b; }
+.click-area .cps-display {
+  font-size: 1rem; pointer-events: none; margin-top: 8px;
+  color: rgba(255,255,255,0.5);
+}
+.click-area .hint-text {
+  font-size: 0.85rem; pointer-events: none; margin-top: 16px;
+  color: rgba(255,255,255,0.3);
+}
+
+.stats-panel {
+  margin-top: 20px; padding: 20px; border-radius: 16px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+}
+.stats-row { display: flex; gap: 16px; justify-content: space-around; text-align: center; }
+.stat-item { flex: 1; }
+.stat-item .stat-value { font-size: 1.6rem; font-weight: 800; color: #818cf8; }
+.stat-item .stat-label { font-size: 0.75rem; color: rgba(255,255,255,0.45); margin-top: 2px; }
+.stat-item.best .stat-value { color: #51cf66; }
+
+.history-section { margin-top: 16px; }
+.history-title { font-size: 0.82rem; color: rgba(255,255,255,0.45); margin-bottom: 8px; }
+.history-list { display: flex; flex-direction: column; gap: 4px; }
+.history-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 12px; border-radius: 8px;
+  background: rgba(255,255,255,0.03); font-size: 0.82rem;
+}
+.history-item .hi-cps { font-weight: 700; color: #818cf8; }
+.history-item .hi-clicks { color: rgba(255,255,255,0.5); }
+.history-item.best-record { background: rgba(81,207,102,0.1); }
+.history-item.best-record .hi-cps { color: #51cf66; }
+
+.btn-row { display: flex; gap: 10px; margin-top: 16px; }
+.btn {
+  flex: 1; padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);
+  font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.15s;
+  background: transparent; color: #e8e8f0; text-align: center;
+}
+.btn:hover { background: rgba(255,255,255,0.06); border-color: #818cf8; }
+.btn.primary { background: #818cf8; border-color: #818cf8; color: #fff; }
+.btn.primary:hover { background: #6d78f0; }
+.btn.danger { border-color: #ff6b6b; color: #ff6b6b; }
+.btn.danger:hover { background: rgba(255,107,107,0.1); }
+
+@media (max-width: 600px) {
+  .container { padding: 16px 12px 40px; }
+  .click-area { min-height: 240px; }
+  .click-area .click-count { font-size: 3rem; }
+  .stat-item .stat-value { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <a class="back-btn" href="../index.html" title="返回导航">←</a>
+    <h1>🖱 手速测试</h1>
+  </div>
+  <div class="subtitle">在限定时间内疯狂点击！</div>
+
+  <div class="time-selector" id="timeSelector">
+    <button class="time-btn" data-time="3">3秒</button>
+    <button class="time-btn active" data-time="5">5秒</button>
+    <button class="time-btn" data-time="10">10秒</button>
+    <button class="time-btn" data-time="30">30秒</button>
+    <button class="time-btn" data-time="60">60秒</button>
+  </div>
+
+  <div class="click-area idle" id="clickArea">
+    <div class="click-count" id="clickCount">0</div>
+    <div class="click-label">点击次数</div>
+    <div class="timer" id="timerDisplay">5s</div>
+    <div class="cps-display" id="cpsDisplay">0 CPS</div>
+    <div class="hint-text" id="hintText">点击开始测试</div>
+  </div>
+
+  <div class="stats-panel">
+    <div class="stats-row">
+      <div class="stat-item best">
+        <div class="stat-value" id="bestCps">—</div>
+        <div class="stat-label">历史最佳 CPS</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="bestClicks">—</div>
+        <div class="stat-label">历史最多点击</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="history-section" id="historySection" style="display:none">
+    <div class="history-title">历史记录</div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn danger" id="clearBtn">🗑 清除记录</button>
+  </div>
+</div>
+
+<script>
+const AREA = document.getElementById('clickArea');
+const CLICK_COUNT = document.getElementById('clickCount');
+const TIMER = document.getElementById('timerDisplay');
+const CPS = document.getElementById('cpsDisplay');
+const HINT = document.getElementById('hintText');
+const BEST_CPS = document.getElementById('bestCps');
+const BEST_CLICKS = document.getElementById('bestClicks');
+const HLIST = document.getElementById('historyList');
+const HSEC = document.getElementById('historySection');
+
+let state = 'idle'; // idle | running | finished
+let duration = 5;
+let clicks = 0;
+let timeLeft = 0;
+let history = [];
+let animFrameId = null;
+let timerStart = 0;
+const MAX_HISTORY = 20;
+
+function loadHistory() {
+  try {
+    const d = localStorage.getItem('cps-history');
+    if (d) history = JSON.parse(d);
+  } catch(e) { history = []; }
+}
+
+function saveHistory() {
+  localStorage.setItem('cps-history', JSON.stringify(history));
+}
+
+function getBest() {
+  if (history.length === 0) return null;
+  const sorted = [...history].sort((a, b) => b.cps - a.cps);
+  return sorted[0];
+}
+
+function updateStats() {
+  const best = getBest();
+  if (!best) {
+    BEST_CPS.textContent = '—';
+    BEST_CLICKS.textContent = '—';
+    HSEC.style.display = 'none';
+    return;
+  }
+  BEST_CPS.textContent = best.cps.toFixed(1) + ' CPS';
+  BEST_CLICKS.textContent = best.clicks + ' 次';
+  renderHistory();
+}
+
+function renderHistory() {
+  if (history.length === 0) { HSEC.style.display = 'none'; return; }
+  HSEC.style.display = 'block';
+  const bestCps = getBest().cps;
+  const display = [...history].reverse().slice(0, 10);
+  HLIST.innerHTML = display.map(h => {
+    const isBest = h.cps >= bestCps;
+    return `<div class="history-item${isBest ? ' best-record' : ''}">
+      <span>${h.duration}秒 / <span class="hi-clicks">${h.clicks} 次</span></span>
+      <span class="hi-cps">${h.cps.toFixed(1)} CPS</span>
+    </div>`;
+  }).join('');
+}
+
+function setState(s) {
+  state = s;
+  AREA.className = 'click-area ' + s;
+}
+
+function resetDisplay() {
+  CLICK_COUNT.textContent = '0';
+  TIMER.textContent = duration + 's';
+  TIMER.className = 'timer';
+  CPS.textContent = '0 CPS';
+}
+
+function startTest() {
+  if (state === 'running') return;
+  clicks = 0;
+  timeLeft = duration;
+  setState('running');
+  CLICK_COUNT.textContent = '0';
+  TIMER.textContent = duration + 's';
+  TIMER.className = 'timer';
+  CPS.textContent = '0 CPS';
+  HINT.textContent = '疯狂点击！';
+  timerStart = performance.now();
+  scheduleTimer();
+}
+
+function finishTest() {
+  setState('finished');
+  HINT.textContent = '点击重新测试';
+  const cps = clicks / duration;
+  CPS.textContent = cps.toFixed(1) + ' CPS';
+  history.push({ duration, clicks, cps, time: Date.now() });
+  if (history.length > MAX_HISTORY) history.shift();
+  saveHistory();
+  updateStats();
+}
+
+function scheduleTimer() {
+  function tick() {
+    if (state !== 'running') return;
+    const elapsed = (performance.now() - timerStart) / 1000;
+    const remaining = Math.max(0, duration - elapsed);
+    timeLeft = remaining;
+    TIMER.textContent = remaining.toFixed(1) + 's';
+    if (remaining < 2) TIMER.className = 'timer urgent';
+    if (remaining <= 0) {
+      TIMER.textContent = '0.0s';
+      finishTest();
+      return;
+    }
+    const cps = clicks / (duration - remaining);
+    CPS.textContent = (cps > 0 ? cps.toFixed(1) : '0') + ' CPS';
+    animFrameId = requestAnimationFrame(tick);
+  }
+  animFrameId = requestAnimationFrame(tick);
+}
+
+function handleClick() {
+  if (state === 'idle') { startTest(); return; }
+  if (state === 'running') {
+    clicks++;
+    CLICK_COUNT.textContent = clicks;
+    return;
+  }
+  if (state === 'finished') {
+    setState('idle');
+    resetDisplay();
+    HINT.textContent = '点击开始测试';
+    return;
+  }
+}
+
+AREA.addEventListener('click', handleClick);
+AREA.addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  handleClick();
+}, { passive: false });
+
+document.addEventListener('keydown', function(e) {
+  if (e.code === 'Space' || e.code === 'Enter') {
+    e.preventDefault();
+    handleClick();
+  }
+});
+
+// Time selector
+document.querySelectorAll('.time-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    if (state === 'running') return;
+    document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    duration = parseInt(this.dataset.time);
+    resetDisplay();
+    setState('idle');
+    HINT.textContent = '点击开始测试';
+  });
+});
+
+document.getElementById('clearBtn').addEventListener('click', function() {
+  if (state === 'running') return;
+  history = [];
+  saveHistory();
+  updateStats();
+  BEST_CPS.textContent = '—';
+  BEST_CLICKS.textContent = '—';
+  HSEC.style.display = 'none';
+});
+
+loadHistory();
+updateStats();
+</script>
+</body>
+</html>

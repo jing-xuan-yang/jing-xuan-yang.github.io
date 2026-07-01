@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>反应力测试</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh; display: flex; flex-direction: column;
+  background: #0c0c18; color: #e8e8f0;
+  transition: background 0.3s, color 0.3s;
+  user-select: none; -webkit-user-select: none;
+}
+.container { max-width: 600px; margin: 0 auto; padding: 30px 20px 60px; width: 100%; flex: 1; display: flex; flex-direction: column; }
+
+.header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.header h1 { font-size: 1.4rem; font-weight: 800; cursor: default; }
+.back-btn {
+  width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);
+  cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center;
+  transition: 0.2s; background: transparent; color: #e8e8f0; text-decoration: none;
+  flex-shrink: 0;
+}
+.back-btn:hover { transform: scale(1.1); border-color: #818cf8; }
+
+.subtitle { font-size: 0.82rem; color: rgba(255,255,255,0.45); margin-bottom: 24px; }
+
+.test-area {
+  flex: 1; min-height: 350px; border-radius: 20px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.08s, transform 0.15s;
+  background: #1e1e3a; border: 2px solid rgba(255,255,255,0.08);
+  position: relative; overflow: hidden;
+}
+.test-area:active { transform: scale(0.99); }
+.test-area.waiting { background: #3a1a1a; border-color: rgba(255,80,80,0.3); }
+.test-area.ready { background: #1a3a1a; border-color: rgba(80,255,80,0.3); }
+.test-area.ready { cursor: pointer; }
+.test-area .status-text {
+  font-size: 1.4rem; font-weight: 700; pointer-events: none;
+  transition: color 0.15s;
+}
+.test-area.waiting .status-text { color: #ff6b6b; }
+.test-area.ready .status-text { color: #51cf66; }
+.test-area.idle .status-text { color: rgba(255,255,255,0.5); }
+
+.result-display {
+  font-size: 3.5rem; font-weight: 800; pointer-events: none;
+  margin-top: 8px;
+}
+.test-area.idle .result-display { display: none; }
+.test-area .hint {
+  font-size: 0.85rem; pointer-events: none; margin-top: 12px;
+  color: rgba(255,255,255,0.35);
+}
+
+.stats-panel {
+  margin-top: 20px; padding: 20px; border-radius: 16px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+}
+.stats-row { display: flex; gap: 16px; justify-content: space-around; text-align: center; }
+.stat-item { flex: 1; }
+.stat-item .stat-value { font-size: 1.6rem; font-weight: 800; color: #818cf8; }
+.stat-item .stat-label { font-size: 0.75rem; color: rgba(255,255,255,0.45); margin-top: 2px; }
+.stat-item.best .stat-value { color: #51cf66; }
+.stat-item.worst .stat-value { color: #ff6b6b; }
+
+.history-section { margin-top: 16px; }
+.history-title { font-size: 0.82rem; color: rgba(255,255,255,0.45); margin-bottom: 8px; }
+.history-bar { display: flex; gap: 4px; align-items: flex-end; height: 40px; }
+.history-bar .bar {
+  flex: 1; border-radius: 4px 4px 0 0; min-height: 4px;
+  transition: height 0.3s; position: relative;
+  background: linear-gradient(to top, #818cf8, #a78bfa);
+}
+.history-bar .bar.best { background: linear-gradient(to top, #51cf66, #69db7c); }
+.history-bar .bar.worst { background: linear-gradient(to top, #ff6b6b, #ff8787); }
+.history-bar .bar .bar-label {
+  position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+  font-size: 0.65rem; white-space: nowrap; color: rgba(255,255,255,0.5);
+}
+
+.btn-row { display: flex; gap: 10px; margin-top: 16px; }
+.btn {
+  flex: 1; padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);
+  font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.15s;
+  background: transparent; color: #e8e8f0; text-align: center;
+}
+.btn:hover { background: rgba(255,255,255,0.06); border-color: #818cf8; }
+.btn.primary { background: #818cf8; border-color: #818cf8; color: #fff; }
+.btn.primary:hover { background: #6d78f0; }
+.btn.danger { border-color: #ff6b6b; color: #ff6b6b; }
+.btn.danger:hover { background: rgba(255,107,107,0.1); }
+
+@media (max-width: 600px) {
+  .container { padding: 16px 12px 40px; }
+  .test-area { min-height: 280px; }
+  .result-display { font-size: 2.8rem; }
+  .stat-item .stat-value { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <a class="back-btn" href="../index.html" title="返回导航">←</a>
+    <h1>⚡ 反应力测试</h1>
+  </div>
+  <div class="subtitle">等待红色变绿色，尽快点击！</div>
+
+  <div class="test-area idle" id="testArea">
+    <div class="status-text" id="statusText">点击开始</div>
+    <div class="result-display" id="resultDisplay"></div>
+    <div class="hint" id="hintText">点击任意位置开始测试</div>
+  </div>
+
+  <div class="stats-panel">
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-value" id="lastResult">—</div>
+        <div class="stat-label">最近</div>
+      </div>
+      <div class="stat-item best">
+        <div class="stat-value" id="bestResult">—</div>
+        <div class="stat-label">最快</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="avgResult">—</div>
+        <div class="stat-label">平均</div>
+      </div>
+      <div class="stat-item worst">
+        <div class="stat-value" id="worstResult">—</div>
+        <div class="stat-label">最慢</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="history-section" id="historySection" style="display:none">
+    <div class="history-title">历史记录</div>
+    <div class="history-bar" id="historyBar"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn danger" id="clearBtn">🗑 清除记录</button>
+  </div>
+</div>
+
+<script>
+const AREA = document.getElementById('testArea');
+const STATUS = document.getElementById('statusText');
+const RESULT = document.getElementById('resultDisplay');
+const HINT = document.getElementById('hintText');
+const LAST = document.getElementById('lastResult');
+const BEST = document.getElementById('bestResult');
+const AVG = document.getElementById('avgResult');
+const WORST = document.getElementById('worstResult');
+const HBAR = document.getElementById('historyBar');
+const HSEC = document.getElementById('historySection');
+
+// State machine: idle -> waiting -> ready -> (click) -> result -> waiting -> ...
+let state = 'idle'; // idle | waiting | ready
+let readyTime = 0;
+let results = [];
+const MAX_RESULTS = 20;
+let timeoutId = null;
+let startTime = 0;
+
+function loadResults() {
+  try {
+    const d = localStorage.getItem('reaction-results');
+    if (d) results = JSON.parse(d);
+  } catch(e) { results = []; }
+}
+
+function saveResults() {
+  localStorage.setItem('reaction-results', JSON.stringify(results));
+}
+
+function setState(s) {
+  state = s;
+  AREA.className = 'test-area ' + s;
+}
+
+function getStats() {
+  if (results.length === 0) return null;
+  const best = Math.min(...results);
+  const worst = Math.max(...results);
+  const avg = results.reduce((a, b) => a + b, 0) / results.length;
+  return { best, worst, avg, count: results.length };
+}
+
+function formatMs(ms) {
+  return Math.round(ms) + ' ms';
+}
+
+function updateStats() {
+  const stats = getStats();
+  if (!stats) {
+    LAST.textContent = '—';
+    BEST.textContent = '—';
+    AVG.textContent = '—';
+    WORST.textContent = '—';
+    HSEC.style.display = 'none';
+    return;
+  }
+  LAST.textContent = formatMs(results[results.length - 1]);
+  BEST.textContent = formatMs(stats.best);
+  AVG.textContent = formatMs(stats.avg);
+  WORST.textContent = formatMs(stats.worst);
+  renderHistory();
+}
+
+function renderHistory() {
+  if (results.length === 0) { HSEC.style.display = 'none'; return; }
+  HSEC.style.display = 'block';
+  const max = Math.max(...results);
+  const min = Math.min(...results);
+  const range = max - min || 1;
+  const display = results.slice(-10);
+  HBAR.innerHTML = display.map(v => {
+    const pct = ((v - min) / range) * 100;
+    const cls = v === min ? 'bar best' : v === max ? 'bar worst' : 'bar';
+    return `<div class="${cls}" style="height:${Math.max(4, pct)}%" title="${Math.round(v)} ms"><span class="bar-label">${Math.round(v)}</span></div>`;
+  }).join('');
+}
+
+function startWaiting() {
+  setState('waiting');
+  STATUS.textContent = '等待绿色…';
+  HINT.textContent = '变绿时请快速点击';
+  RESULT.textContent = '';
+  const delay = 1000 + Math.random() * 3000; // 1-4秒随机延迟
+  timeoutId = setTimeout(() => {
+    startReady();
+  }, delay);
+}
+
+function startReady() {
+  setState('ready');
+  STATUS.textContent = '🟢 点击！';
+  HINT.textContent = '快点击！';
+  readyTime = performance.now();
+}
+
+function handleClick() {
+  if (state === 'idle') {
+    startWaiting();
+    return;
+  }
+  if (state === 'waiting') {
+    clearTimeout(timeoutId);
+    setState('idle');
+    STATUS.textContent = '别急！等待变绿';
+    HINT.textContent = '点击重新开始';
+    RESULT.textContent = '💥 太早了';
+    return;
+  }
+  if (state === 'ready') {
+    const elapsed = performance.now() - readyTime;
+    results.push(elapsed);
+    if (results.length > MAX_RESULTS) results.shift();
+    saveResults();
+    updateStats();
+    setState('idle');
+    STATUS.textContent = '点击继续';
+    HINT.textContent = '点击再次测试';
+    RESULT.textContent = formatMs(elapsed);
+    return;
+  }
+}
+
+AREA.addEventListener('click', handleClick);
+AREA.addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  handleClick();
+}, { passive: false });
+
+// Keyboard support
+document.addEventListener('keydown', function(e) {
+  if (e.code === 'Space' || e.code === 'Enter') {
+    e.preventDefault();
+    handleClick();
+  }
+});
+
+document.getElementById('clearBtn').addEventListener('click', function() {
+  results = [];
+  saveResults();
+  updateStats();
+  setState('idle');
+  STATUS.textContent = '点击开始';
+  HINT.textContent = '点击任意位置开始测试';
+  RESULT.textContent = '';
+});
+
+loadResults();
+updateStats();
+</script>
+</body>
+</html>
